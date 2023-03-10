@@ -3,7 +3,7 @@ alias aliases="vim ~/.bash_aliases && source ~/.zshrc"
 # --- Git ---
 alias gco="git checkout"
 alias gcm="git commit -a -m"
-alias gpoh="git push -u origin head"
+alias gpoh="git push -u origin HEAD"
 
 # --- Workflow ---
 alias pnrd="git pull && npm run dev"
