@@ -1,7 +1,7 @@
 ### Instructions
 
 1. checkout/clone this repository into `~/dotfiles/`
-2. create a symlink into your home folder by running: `ln -s -f ~/dotfiles/ ~/`
+2. create a symlink into your home folder by running: `ln -s -f ~/development/dotfiles/.bash_aliases ~/.bash_aliases`
    - `ln` command creates a link
    - `-s` flag indicates that the link is symbolic (it acts as a pointer/reference instead of as a copy)
    - `-f` flag overwrites the destination path of the symlink if a file already exists there (BE CAREFUL -- THIS CAN BE DESTRUCTIVE)
