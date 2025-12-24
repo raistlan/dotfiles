@@ -1,4 +1,4 @@
-alias aliases="vim ~/.bash_aliases && source ~/.zshrc"
+alias aliases="vim ~/.bash_aliases && source ~/.bashrc"
 
 # --- Git ---
 alias gco="git checkout"
@@ -20,6 +20,9 @@ alias finder='open'
 alias whiptail="dialog"
 alias c='clear'
 
+# --- Windows ---
+alias explore='explorer.exe'
+
 # --- Navigation ---
 alias ll='ls -alF'
 alias ldir="ls -al | grep ^d"
@@ -33,3 +36,64 @@ alias unzip='tar -zxvf'
 
 # --- Kubernetes ---
 alias kc=“kubectl”
+
+# --- Functions ---
+journal() {
+  local OPTIND=1
+  local mode=""
+  local msg="scripted entry"
+
+  # parse flags
+  while getopts ":dw" opt; do
+    case "$opt" in
+      d) mode="diary" ;;
+      w) mode="work" ;;
+      *)
+        echo "Usage: journal -d|-w [message]"
+        return 1
+        ;;
+    esac
+  done
+
+  shift $((OPTIND - 1))
+
+  # remaining args = message
+  if [[ -n "$1" ]]; then
+    msg="$*"
+  fi
+
+  # determine directory based on mode
+  local journal_dir
+  case "$mode" in
+    diary)
+      for journal_dir in \
+        "/mnt/c/development/diary" \
+        "$HOME/development/diary"
+      do
+        [[ -d "$journal_dir" ]] && break
+      done
+      ;;
+    work)
+      for journal_dir in \
+        "/mnt/c/development/workdiary" \
+        "$HOME/development/workdiary"
+      do
+        [[ -d "$journal_dir" ]] && break
+      done
+      ;;
+    *)
+      echo "You must specify -d (diary) or -w (work)"
+      return 1
+      ;;
+  esac
+
+  [[ -d "$journal_dir" ]] || {
+    echo "Journal directory not found"
+    return 1
+  }
+
+  git -C "$journal_dir" add . &&
+  git -C "$journal_dir" commit -m "$msg" &&
+  git -C "$journal_dir" push
+}
+
