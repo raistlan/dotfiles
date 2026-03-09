@@ -22,6 +22,7 @@ export CPPFLAGS="-I/$(brew --prefix)/opt/openssl/include"
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 export PIPENV_PYTHON="$PYENV_ROOT/shims/python"
+export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
 
 plugin=(
   pyenv

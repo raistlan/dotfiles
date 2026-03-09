@@ -1,9 +1,9 @@
 alias aliases="vim ~/.zsh_aliases && source ~/.zshrc"
 
 # --- Git ---
+alias ga="git add ."
 alias gco="git checkout"
-alias gcm="git commit -a -m"
-alias gacm="git add . && git commit -m"
+alias gcm="git commit -m"
 alias gpoh="git push -u origin HEAD"
 
 # --- Workflow ---
@@ -13,20 +13,16 @@ alias nrd="npm i && npm run dev"
 alias nrds="npm run dev:start"
 alias grep='grep --color=auto'
 
-# --- VS Code ---
-alias c='code .'
-
 # --- MacOS ---
 alias finder='open'
 alias whiptail="dialog"
-alias c='clear'
 
 # --- Windows ---
 alias explore='explorer.exe'
 
 # --- Navigation ---
-alias ll='ls -alF'
-alias ldir="ls -al | grep ^d"
+alias ll='ls -al --group-directories-first --git'
+alias ldir="ll | grep ^d"
 alias ..='cd ..'
 alias ...='cd ../..'
 alias h='history'
@@ -36,7 +32,7 @@ alias duh='du -sh * | sort -hr'
 alias unzip='tar -zxvf'
 
 # --- Kubernetes ---
-alias kc=“kubectl”
+alias kc='kubectl'
 
 # --- Functions ---
 journal() {
@@ -47,10 +43,10 @@ journal() {
   # parse flags
   while getopts ":dw" opt; do
     case "$opt" in
-      d) mode="diary" ;;
+      p) mode="personal" ;;
       w) mode="work" ;;
       *)
-        echo "Usage: journal -d|-w [message]"
+        echo "Usage: journal -p|-w [message]"
         return 1
         ;;
     esac
@@ -83,7 +79,7 @@ journal() {
       done
       ;;
     *)
-      echo "You must specify -d (diary) or -w (work)"
+      echo "You must specify -p (personal) or -w (work)"
       return 1
       ;;
   esac
