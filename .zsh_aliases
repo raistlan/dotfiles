@@ -1,4 +1,4 @@
-alias aliases="vim ~/.zsh_aliases && source ~/.zshrc"
+alias aliases="vim ~/development/dotfiles/.zsh_aliases && source ~/.zshrc"
 
 # --- Git ---
 alias ga="git add ."

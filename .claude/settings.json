@@ -1,0 +1,58 @@
+{
+  "effortLevel": "high",
+  "enabledPlugins": {
+    "craft@sargunv-plugins": true,
+    "tutor-student-proctor@raistlan-plugins": true,
+    "warp@claude-code-warp": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-code-warp": {
+      "source": {
+        "repo": "warpdotdev/claude-code-warp",
+        "source": "github"
+      }
+    },
+    "raistlan-plugins": {
+      "source": {
+        "path": "/Users/raistlan/development/tutor-student-proctor",
+        "source": "directory"
+      }
+    },
+    "sargunv-plugins": {
+      "source": {
+        "repo": "sargunv/claude-plugins",
+        "source": "github"
+      }
+    }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/raistlan/.local/share/mise/installs/github-git-ai-project-git-ai/1.3.2/git-ai checkpoint claude --hook-input stdin",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/raistlan/.local/share/mise/installs/github-git-ai-project-git-ai/1.3.2/git-ai checkpoint claude --hook-input stdin",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  },
+  "model": "opus[1m]",
+  "permissions": {
+    "defaultMode": "auto"
+  },
+  "skipAutoPermissionPrompt": true,
+  "syntaxHighlightingDisabled": false
+}
