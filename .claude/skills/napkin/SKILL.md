@@ -1,7 +1,7 @@
 ---
 name: napkin
 description: "Use when the user says /napkin (or asks to create/save/capture a napkin of something) — generates a mermaid diagram for the current topic and files it into today's DIAGRAMS rollup at ~/development/workdiary/DIAGRAMS/YYYY-MM-DD.md under the right heading. Back-of-napkin diagram capture for the workdiary."
-allowed-tools: ["Read", "Write", "Edit", "Bash(date:*)", "Bash(mkdir:*)", "Bash(test:*)", "Bash(ls:*)"]
+allowed-tools: ["Read", "Write", "Edit", "Bash(date:*)", "Bash(mkdir:*)", "Bash(test:*)", "Bash(ls:*)", "Bash(npx:*)", "Bash(cat:*)", "Bash(printf:*)"]
 ---
 
 # Napkin
@@ -26,6 +26,7 @@ date +%Y-%m-%d
 5. Write a **1–3 sentence** description (see Description guidance).
 6. File the diagram into the target according to the **Insertion logic**.
 7. Confirm to the user: one line with the file path, project (or "no project"), and title.
+8. **Optional render step** (see Optional rendering below) — only when the user explicitly asks, e.g. "and check the render", "render it so I can see", "preview this".
 
 ## Inference
 
@@ -45,11 +46,89 @@ If the user explicitly says "no project" or the topic is cross-cutting (e.g. "me
 - Label nodes with real identifiers from the conversation (`file:line`, endpoint names, service names) when they exist — the user prefers grounded diagrams.
 - Prefer one focused diagram over a sprawling one. If the user asked for before/after, two small diagrams side by side (separate mermaid blocks under the same `###`) is fine.
 
+## Mermaid syntax pitfalls
+
+Mermaid's parser is brittle and many special characters silently break a diagram that looks fine in plain text. Always produce valid syntax on the first try — the user sees a parse error before they see your diagram.
+
+- **Semicolons (`;`) terminate statements in sequenceDiagram.** A note like `Note over A,B: one thing; another thing` is parsed as two statements, and the second one almost always fails. **Never put `;` inside note text, participant labels, or titles.** Use `.`, `,`, or an em-dash (`—`) instead. This is the most common cause of "Parse error" when the diagram looks fine in plain text.
+- **`#` starts a comment in some contexts.** Prefix hashes inside labels with care; prefer writing out the word or quoting the full label.
+- **Parentheses in `flowchart` node labels** can confuse the shape parser (e.g. `A[foo (bar)]`). If the label contains `(`, `)`, `[`, `]`, `{`, `}`, or a colon, wrap the label in double quotes: `A["foo (bar)"]`.
+- **Newlines in notes/labels must be `<br/>`, not literal newlines.** `\n` does not work.
+- **`end` is a reserved word.** Don't use it as a node id in flowcharts that also have `subgraph ... end` blocks — the parser gets confused.
+- **Colons after keywords need a space.** Write `Note over A,B: text`, not `Note over A,B:text`.
+- **Avoid unicode arrows (`→`, `←`) in mermaid syntax positions** (edge definitions, participant arrows). They're fine *inside* quoted labels and notes, just not as structural tokens.
+- **Notes inside `rect` blocks in sequenceDiagram must span the full participant width the rect covers.** A `rect` computes its height from the vertical extent of the messages between its participants, not from narrow notes at the edge. If the rect participants span A→DB but you write `Note over A,B:` inside it, the note can render *below* the rect's colored background. Fix: widen the note to match the widest participant range in the rect (`Note over A,DB:`), or place the note immediately before an arrow that spans the full width so the rect's bounding box picks it up.
+- **Informative subgraph titles are good — but pick orientation to fit them.** Long titles like `Entry points (parents of the modal)` or `Events to Avo and Rudderstack` help readers skim. In `flowchart TD`, wide-but-shallow subgraphs force the title into a thin horizontal strip, and Obsidian's mermaid renderer (stricter than `mmdc`) wraps the title into the subgraph body where it overlaps child nodes. The fix is **orientation, not truncation**: when any subgraph title is longer than ~20 characters, default to `flowchart LR`. LR gives each subgraph a tall-and-narrow frame with plenty of vertical room for the title and renders cleanly in Obsidian and mmdc alike.
+- **Use `/` sparingly in subgraph titles.** Mermaid's renderer treats `/` as a soft-wrap hint. `Events to Avo / Rudderstack` will wrap at the slash in Obsidian even when other long titles wouldn't. Use "and" or a comma instead, or switch to LR orientation where the extra width absorbs the slash.
+- **When to prefer `flowchart TD` over `LR`:** branching trees (one root, many children) or decision flows with short node labels. **When to prefer `LR`:** pipelines and funnels (A → B → C → D stages), diagrams with 4+ subgraphs, or any diagram where subgraph titles carry meaningful context.
+
+If a diagram you wrote produces a "Parse error," the fix is almost always one of the above. Scan the cited line for a stray `;`, `#`, `:`, or unquoted `(`/`[` before rewriting anything structural. If a diagram renders but **looks wrong** (text overlapping nodes, labels behind edges), the cause is usually a wrapped subgraph title or a mis-scoped `rect` note — above.
+
 ## Description guidance
 
 - 1–3 sentences, immediately under the `### {title}` heading, **before** the mermaid fence.
 - Add context the diagram cannot convey: *why* this comparison exists, what trigger motivated it, what question it is answering. Never narrate what the diagram already shows.
 - If there is nothing useful to say beyond the title, skip the description.
+
+## Optional rendering
+
+Trigger **only** when the user explicitly asks. The user reads these diagrams in Obsidian, so a local render is a sanity check, not a perfect preview — Obsidian's mermaid renderer is stricter than `mmdc` about subgraph title wrapping and some edge routing. If the render looks clean in `mmdc`, Obsidian usually (but not always) agrees.
+
+### One-time setup
+
+First invocation will need chrome-headless-shell installed for puppeteer. If the render step fails with "Could not find Chrome," tell the user to run:
+
+```
+npx -y puppeteer browsers install chrome-headless-shell
+```
+
+### Per-diagram render
+
+Chrome versions drift — resolve the binary path at render time rather than hardcoding it.
+
+1. Find the currently installed chrome-headless-shell:
+
+```
+CHROME_PATH=$(ls ~/.cache/puppeteer/chrome-headless-shell/*/chrome-headless-shell-*/chrome-headless-shell 2>/dev/null | head -1)
+```
+
+If `$CHROME_PATH` is empty, the user hasn't run the install step — ask them to run it and stop.
+
+2. Regenerate `~/.claude/napkin/puppeteer-config.json` with the resolved path (cheap, keeps the config fresh as puppeteer updates):
+
+```
+mkdir -p ~/.claude/napkin
+printf '{"executablePath": "%s"}\n' "$CHROME_PATH" > ~/.claude/napkin/puppeteer-config.json
+```
+
+3. Write the mermaid body (just the fenced content, no `---` or prose) to `/tmp/napkin-<slug>.mmd` where `<slug>` is a short kebab-case derivation of the diagram title.
+4. Render:
+
+```
+npx -y -p @mermaid-js/mermaid-cli mmdc \
+  -i /tmp/napkin-<slug>.mmd \
+  -o /tmp/napkin-<slug>.png \
+  -b transparent -t dark --scale 2 \
+  --puppeteerConfigFile ~/.claude/napkin/puppeteer-config.json
+```
+
+5. After a successful render, `Read` the PNG so it appears inline in the reply. The user can visually confirm the diagram before opening Obsidian.
+
+### What a render can catch
+
+- Node/edge overlap from too-dense layouts.
+- Mis-scoped `rect` blocks in sequence diagrams.
+- Accidentally orphaned nodes (typos in edge definitions leave a node floating).
+- Aspect ratio problems that make the diagram unusable at the Obsidian column width.
+
+### What a render will miss
+
+- **Obsidian-specific title wrapping.** mmdc gives subgraph titles more horizontal budget than Obsidian does, so a title that renders fine here may still wrap there. Trust the "informative titles + LR orientation" rule above — don't assume a clean mmdc render means Obsidian will agree.
+- Obsidian-specific CSS overrides (the user's theme may adjust node padding, font size, line height).
+
+### Cost
+
+~15–30 seconds per render after first run (puppeteer launch + chrome startup). ~2 minutes on first run (package download). Skip unless explicitly requested.
 
 ## File creation (when target doesn't exist)
 
