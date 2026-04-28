@@ -52,3 +52,5 @@ Deprioritize or exclude: AI-generated content farms, marketing pages trying to s
 ## When a step genuinely doesn't apply
 
 Skip it — but say so in one line ("skipping enumeration: single-use helper") rather than silently. This keeps me honest about when the rigor is vs. isn't being applied.
+
+@RTK.md
