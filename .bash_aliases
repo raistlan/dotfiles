@@ -3,6 +3,7 @@ alias aliases="vim ~/.bash_aliases && source ~/.bashrc"
 # --- Git ---
 alias gco="git checkout"
 alias gcm="git commit -a -m"
+alias gca="git add . && git commit -m"
 alias gpoh="git push -u origin HEAD"
 
 # --- Workflow ---
