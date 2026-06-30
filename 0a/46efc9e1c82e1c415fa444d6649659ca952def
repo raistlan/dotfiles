@@ -1,0 +1,31 @@
+.claude/skills/interactive-grilling/references/slideshow-template.html
+  s_d0f96bcd4a9bd6::t_007ddce09b9aa9 1
+.claude/skills/interactive-pr-review/references/comments-buffer-template.md
+  s_d0f96bcd4a9bd6::t_c180dda6ae7907 1-60
+.claude/skills/interactive-pr-review/references/slideshow-template.html
+  s_c5aa85c9900ee7::t_29e5036c1577ec 1-633
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "0a46efc9e1c82e1c415fa444d6649659ca952def",
+  "prompts": {},
+  "sessions": {
+    "s_c5aa85c9900ee7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ab3dc5ed-c66e-475d-a9da-7c5ea9cd6f6a",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    },
+    "s_d0f96bcd4a9bd6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91e1d654-97be-42cf-9e95-c7846ff66848",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
