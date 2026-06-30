@@ -3,33 +3,9 @@
     "defaultMode": "auto"
   },
   "model": "opus[1m]",
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/raistlan/.local/share/mise/installs/github-git-ai-project-git-ai/1.3.2/git-ai checkpoint claude --hook-input stdin"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/raistlan/.local/share/mise/installs/github-git-ai-project-git-ai/1.3.2/git-ai checkpoint claude --hook-input stdin"
-          }
-        ]
-      }
-    ]
-  },
   "statusLine": {
     "type": "command",
-    "command": "input=$(cat); user=$(whoami); cwd=$(echo \"$input\" | jq -r '.workspace.current_dir' | sed \"s|$HOME|~|g\"); model=$(echo \"$input\" | jq -r '.model.display_name'); time=$(date +%H:%M); ctx_used=$(echo \"$input\" | jq -r '.context_window.current_usage | if . then ((.input_tokens // 0) + (.cache_creation_input_tokens // 0) + (.cache_read_input_tokens // 0)) else empty end'); ctx_max=$(echo \"$input\" | jq -r '.context_window.context_window_size // empty'); burned=$(echo \"$input\" | jq -r '.context_window.total_output_tokens // empty'); transcript=$(echo \"$input\" | jq -r '.transcript_path'); todo_count=$([ -f \"$transcript\" ] && grep -c '\"type\":\"todo\"' \"$transcript\" 2>/dev/null || echo 0); cd \"$(echo \"$input\" | jq -r '.workspace.current_dir')\" 2>/dev/null; branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ''); status=''; [ -n \"$branch\" ] && { [ -n \"$(git status --porcelain 2>/dev/null)\" ] && status='*'; }; B='\\033[38;2;30;102;245m'; G='\\033[38;2;64;160;43m'; Y='\\033[38;2;223;142;29m'; M='\\033[38;2;136;57;239m'; C='\\033[38;2;23;146;153m'; R='\\033[0m'; T='\\033[38;2;76;79;105m'; RD='\\033[38;2;210;15;57m'; printf \"${C}${user}${R}:${B}${cwd}${R}\"; [ -n \"$branch\" ] && printf \" ${G}${branch}${Y}${status}${R}\"; [ -n \"$ctx_max\" ] && printf \" ${M}ctx:${ctx_used:-—}${R}\"; [ -n \"$burned\" ] && printf \" ${RD}tknsburned:${burned}${R}\"; printf \" ${T}${model}${R} ${Y}${time}${R}\"; [ \"$todo_count\" -gt 0 ] && printf \" ${C}todos:${todo_count}${R}\"; echo"
+    "command": "input=$(cat); user=$(whoami); cwd=$(echo \"$input\" | jq -r '.workspace.current_dir' | sed \"s|$HOME|~|g\"); model=$(echo \"$input\" | jq -r '.model.display_name'); time=$(date +%H:%M); ctx_used=$(echo \"$input\" | jq -r '.context_window.current_usage | if . then ((.input_tokens // 0) + (.cache_creation_input_tokens // 0) + (.cache_read_input_tokens // 0)) else empty end'); ctx_max=$(echo \"$input\" | jq -r '.context_window.context_window_size // empty'); burned=$(echo \"$input\" | jq -r '.context_window.total_output_tokens // empty'); transcript=$(echo \"$input\" | jq -r '.transcript_path'); todo_count=$([ -f \"$transcript\" ] && grep -E '\"name\":\"TaskCreate\"|\"name\":\"TaskUpdate\"' \"$transcript\" 2>/dev/null | jq -rs '[.[]? | .message.content // [] | .[]?] | map(select(.type==\"tool_use\")) | reduce .[] as $t ({c:0, s:{}}; if $t.name==\"TaskCreate\" then .c += 1 elif $t.name==\"TaskUpdate\" then .s[$t.input.taskId] = $t.input.status else . end) | .c - ([.s | to_entries[] | select(.value==\"completed\" or .value==\"cancelled\")] | length)' 2>/dev/null || echo 0); cd \"$(echo \"$input\" | jq -r '.workspace.current_dir')\" 2>/dev/null; branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ''); status=''; repo=''; wt=''; if [ -n \"$branch\" ]; then [ -n \"$(git status --porcelain 2>/dev/null)\" ] && status='*'; common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); top=$(git rev-parse --show-toplevel 2>/dev/null); repo=$(basename \"$(dirname \"$common\")\" 2>/dev/null); [ \"$(dirname \"$common\")\" != \"$top\" ] && wt='[wt]'; fi; B='\\033[38;2;30;102;245m'; G='\\033[38;2;64;160;43m'; Y='\\033[38;2;223;142;29m'; M='\\033[38;2;136;57;239m'; C='\\033[38;2;23;146;153m'; R='\\033[0m'; T='\\033[38;2;76;79;105m'; RD='\\033[38;2;210;15;57m'; [ -n \"$ctx_max\" ] && printf \"${M}ctx:${ctx_used:-—}${R} \"; [ -n \"$burned\" ] && printf \"${RD}tknsburned:${burned}${R} \"; if [ -n \"$repo\" ]; then printf \"${B}${repo}${T}${wt}${R} ${G}${branch}${Y}${status}${R}\"; else printf \"${B}${cwd}${R}\"; fi; printf \" ${T}${model}${R} ${Y}${time}${R}\"; [ \"$todo_count\" -gt 0 ] && printf \" ${C}todos:${todo_count}${R}\"; echo"
   },
   "enabledPlugins": {
     "craft@sargunv-plugins": true,
