@@ -1,12 +1,13 @@
 # How I work with Claude
 
-Primary local tasks: **building new features** and **reviewing PRs and branches** in the Acme monorepo. Locally I prefer a minimal set of MCPs; reserve MCP-heavy workflows for Cloud agents.
+Primary local tasks: **building new features** and **reviewing PRs and branches**. Locally I prefer a minimal set of MCPs; reserve MCP-heavy workflows for Cloud agents.
 
 ## Defaults (apply unless I say otherwise)
 
 **Cite claims about the codebase.** Every statement about how this code works needs a `file:line` reference. If you can't cite, say "guessing — verifying" and go read the code before asserting.
 
 **Disambiguate file references.** Bare filenames (`service.py`, `utils.ts`) and generic parent dirs (`services/service.py`) have dozens of matches in this monorepo. Include enough path to uniquely identify the file — the module/submodule that actually disambiguates, not necessarily the full absolute path:
+
 - `identity/auth.py:42` — not `auth.py:42`.
 - `communications/services/service.py:42` — not `services/service.py:42`; `communications` is the disambiguator.
 
@@ -14,13 +15,15 @@ Applies in prose too, not just `file:line` citations.
 
 **Verify before asserting.** Don't infer behavior from function or variable names. Open the file, read the body, confirm.
 
-**Enumerate references — don't sample.** When I ask how a pattern is used, or whether a reference is safe to change, find *every* call site. Then classify them:
+**Enumerate references — don't sample.** When I ask how a pattern is used, or whether a reference is safe to change, find _every_ call site. Then classify them:
+
 - **Happy path** — the common shape of usage.
 - **Variants** — deviations, edge cases, or one-offs worth flagging.
 
 If there are too many to enumerate, tell me the count and give a representative sample across the variants. Never silently truncate at the first 1–2 matches and present them as "the pattern."
 
 **State blast radius for any proposed change or PR review.**
+
 - Every affected caller (enumerate, not sample)
 - Tests that should change or be added
 - Downstream services, consumers, or migration concerns
@@ -30,6 +33,13 @@ If there are too many to enumerate, tell me the count and give a representative 
 
 **Anchor new features on recent, relevant prior art.** When building something new, find the most recent close analogue in the codebase and use it as the template. Cite it and explain why it's the right analogue.
 
+**Don't write slop.** As you write code, keep it free of the tells AI defaults to (full rubric: `de-slop` skill):
+
+- **Comments explain _why_, not _what_.** Intent, constraint, tradeoff, gotcha — never narration the code already shows. No process leakage (PR/ticket refs, "as requested").
+- **No defensive checks or try/catch beyond the local file's norms.** Don't guard inputs that trusted, validated callers already guarantee.
+- **No `Any`/`any` casts to dodge a type error.** Fix the type at its source, narrow, or validate at the boundary.
+- **Inline single-use indirection.** A constant or helper read exactly once is usually just indirection — inline it.
+
 ## External research for examples and patterns
 
 When I ask for examples, patterns, or guidance that requires looking outside this codebase, apply these filters (aligned with Anthropic's own guidance to Claude for web search):
@@ -37,6 +47,7 @@ When I ask for examples, patterns, or guidance that requires looking outside thi
 **Recency first.** Fast-moving topics (framework APIs, library releases, model versions, AI/ML tooling): prioritize sources from the **past 1–3 months**. Moderately stable topics (established framework patterns, mature libraries): past 6–12 months. Timeless fundamentals (algorithms, core CS): any age. State the publication date for each source. If the best example you find is >12 months old on a fast-moving topic, say so explicitly and search for a fresher one before using it as the template I should follow.
 
 **Trust tier (prefer highest).**
+
 1. Official docs, release notes, and changelogs from the tool/framework vendor.
 2. Maintainer-authored content — blog posts or talks from the actual project maintainers.
 3. Recognized engineering publications, peer-reviewed sources (arXiv, IEEE, ACM) for research claims.

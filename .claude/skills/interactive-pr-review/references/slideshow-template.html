@@ -1,0 +1,633 @@
+<!doctype html>
+<!--
+  Shared slideshow template. Canonical copy lives in dotfiles; consumers
+  (interactive-pr-review, interactive-grilling) copy it and fill in slides.
+
+  USAGE
+  -----
+  Copy this file to /tmp/<deck>.html. Replace <PLACEHOLDERS> in the title
+  slide. Add a <section class="slide" id="..."> block per concept you want
+  to walk through. Open with: open /tmp/<deck>.html (macOS).
+
+  STABLE IDS (the routing contract — read this)
+  ---------------------------------------------
+  Every <section class="slide"> MUST carry a stable, unique `id`
+  (id="title", id="info-1", id="d1", id="d2", ...). Navigation, hash routing,
+  and the number-jump key all resolve by id / current DOM position — never by
+  a hardcoded positional index baked into the markup. This means:
+
+    - The hash is the slide's id: #d3 selects the slide with id="d3",
+      regardless of where d3 currently sits in the deck.
+    - Inserting, reordering, or dimming a slide never shifts another slide's
+      anchor. #d3 still points at d3 even after you insert a slide before it.
+    - The counter still shows position ("3 / 11") for orientation, but that
+      number is derived from the live DOM order, not baked into any anchor.
+
+  Convention for consumers: assign ids in CONTENT ORDER, APPEND-ONLY, and
+  NEVER renumber. If a slide becomes obsolete, dim it (don't delete, don't
+  reuse its id); new slides take the next free id. This keeps every previously
+  shared #anchor valid for the life of the deck.
+
+  The number keys (1-9) jump to the Nth slide in current DOM order — a
+  convenience for "go to roughly here", distinct from the id-stable #anchors.
+
+  THEME
+  -----
+  Win95 retro dark theme, ported from the `C` palette and bevel helpers in
+  ledger-sub-7's frontend/app/utils/win95.ts: VT323 monospace, dark surfaces,
+  raised/sunken beveled borders, cyan accent, blue title bars, and a CRT
+  scanline overlay. To retheme, edit the :root variables below — every rule
+  resolves through them. VT323 loads from Google Fonts; if the CDN is blocked
+  it falls back to Courier New, so the deck still renders.
+
+  SLIDE PATTERNS
+  --------------
+  - Title slide: h1, subtitle, meta line (author/size/branch), table of contents.
+  - Content slide: h2, optional .filepath span, code block, .callout for emphasis.
+  - Verdict slide: h2, .verdict-table with asks ranked, suggested cost column.
+
+  CALLOUT VARIANTS
+  ----------------
+  <div class="callout">          — neutral info (cyan)
+  <div class="callout good">     — positive (green)
+  <div class="callout warn">     — caution (amber)
+  <div class="callout danger">   — critical (red)
+  All take a <div class="label">UPPERCASE LABEL</div> as the first child.
+
+  PILLS
+  -----
+  Inline tags: <span class="pill good">design</span>, .pill.warn, .pill.danger, .pill.info.
+  Use to flag what category of feedback a bullet falls under.
+
+  KEYBOARD NAV
+  ------------
+  Arrow keys / Space / PageDown for next, Arrow Left / PageUp for prev,
+  Home/End for first/last, number keys 1-9 to jump.
+
+  SYNTAX HIGHLIGHTING
+  -------------------
+  Add a language class to <code> blocks for syntax colors:
+    <pre><code class="language-tsx">...</code></pre>
+    <pre><code class="language-python">...</code></pre>
+    <pre><code class="language-sql">...</code></pre>
+  Supported languages match highlight.js's common bundle (ts, tsx, js, jsx,
+  python, ruby, go, rust, sql, json, yaml, bash, html, css, diff, etc.).
+  Code without a language class falls back to auto-detection. The
+  highlighter is loaded from cdnjs; if the CDN is blocked the code still
+  renders, just without colors.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>PR #<N> review walkthrough</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* Win95 retro dark palette — mirrors the `C` object in win95.ts. */
+  :root {
+    --bg: #0d0d0d;
+    --surface: #1c1c1c;
+    --surface-alt: #222222;
+    --border-light: #9a9a9a;
+    --border-mid: #666666;
+    --border-dark: #3a3a3a;
+    --text: #d8d8d8;
+    --text-muted: #686868;
+    --text-dim: #484848;
+    --title-bar: #000088;
+    --title-bar-bright: #0000aa;
+    --title-bar-text: #ffffff;
+
+    /* Accent + status colors, drawn from the progress-pip ramp in win95.ts. */
+    --accent: #00cccc;   /* cyan */
+    --accent2: #00cc44;  /* pip green  — rgb(0,204,68) */
+    --warn:    #cccc00;  /* pip yellow — rgb(204,204,0) */
+    --danger:  #e02020;  /* alarm red */
+
+    --font: 'VT323', 'Courier New', monospace;
+
+    /* Content column width — clamps slides + nav so nothing stretches across
+       an ultrawide viewport. Tune here; everything else resolves through it. */
+    --content-max: 1040px;
+
+    /* Legacy semantic aliases so existing slide markup still resolves. */
+    --fg: var(--text);
+    --muted: var(--text-muted);
+    --code-bg: var(--surface-alt);
+    --border: var(--border-mid);
+    --kbd-bg: var(--surface);
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 20px/1.45 var(--font);
+  }
+  /* Outer window frame: raised Win95 bevel around the whole deck. */
+  .deck {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    max-width: var(--content-max);
+    margin-inline: auto;
+    padding: 40px 56px 88px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    display: none;
+    animation: fadeIn 0.14s steps(3);
+  }
+  .slide.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: 44px;
+    font-weight: normal;
+    color: var(--accent);
+    letter-spacing: 0;
+    text-shadow: 0 0 8px rgba(0, 204, 204, 0.25);
+  }
+  /* h2 reads as a Win95 title bar: blue gradient strip with a raised bevel. */
+  h2 {
+    margin: 0 0 22px;
+    font-size: 26px;
+    font-weight: normal;
+    color: var(--title-bar-text);
+    background: linear-gradient(90deg, var(--title-bar), var(--title-bar-bright));
+    padding: 4px 12px;
+    letter-spacing: 0.02em;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .subtitle { color: var(--text-muted); margin: 0 0 24px; font-size: 19px; }
+  p { margin: 0 0 14px; max-width: 920px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; max-width: 920px; }
+  li { margin-bottom: 6px; }
+
+  code {
+    font-family: var(--font);
+    font-size: 1em;
+    background: var(--surface-alt);
+    color: var(--accent);
+    padding: 0 5px;
+  }
+  /* Sunken inset panel for code blocks. */
+  pre {
+    background: var(--surface);
+    color: var(--text);
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: var(--font);
+    font-size: 18px;
+    line-height: 1.4;
+    margin: 0 0 16px;
+    max-width: 920px;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  .row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .col { flex: 1 1 380px; min-width: 0; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1200px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Raised bevel chips. */
+  .pill {
+    display: inline-block;
+    padding: 1px 9px;
+    font-size: 17px;
+    background: var(--surface);
+    color: var(--text-muted);
+    margin-right: 6px;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .pill.good   { color: var(--accent2); }
+  .pill.warn   { color: var(--warn); }
+  .pill.danger { color: var(--danger); }
+  .pill.info   { color: var(--accent); }
+
+  /* Sunken panel with a colored accent bar on the left edge. */
+  .callout {
+    background: var(--surface);
+    padding: 12px 16px;
+    margin: 0 0 14px;
+    max-width: 920px;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+    border-left: 4px solid var(--accent);
+  }
+  .callout.warn   { border-left-color: var(--warn); }
+  .callout.danger { border-left-color: var(--danger); }
+  .callout.good   { border-left-color: var(--accent2); }
+  .callout .label {
+    text-transform: uppercase;
+    font-size: 16px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  /* Bottom toolbar: full-width raised strip, controls clamped to the column. */
+  .nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 52px;
+    background: var(--surface);
+    border-top: 2px solid var(--border-light);
+    display: flex;
+    justify-content: center;
+    z-index: 10;
+  }
+  .nav-inner {
+    width: 100%;
+    max-width: var(--content-max);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+  .nav button {
+    background: var(--surface-alt);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 20px;
+    padding: 4px 16px;
+    cursor: pointer;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .nav button:hover { color: var(--accent); }
+  /* Press depresses the bevel (raised -> sunken). */
+  .nav button:active {
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+  }
+  .nav button[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .counter { color: var(--accent); font-size: 18px; font-variant-numeric: tabular-nums; }
+  /* Segmented cyan progress strip, like a Win95 progress bar's blocks. */
+  .progress {
+    position: fixed; top: 0; left: 0; height: 6px;
+    background: var(--accent);
+    background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.55) 0 2px, transparent 2px 10px);
+    box-shadow: 0 0 0 1px var(--border-dark);
+    transition: width 0.12s steps(8);
+    z-index: 11;
+  }
+
+  kbd {
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 17px;
+    padding: 0 6px;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .meta { font-size: 18px; color: var(--text-muted); }
+  .meta a { color: var(--accent); text-decoration: none; }
+  .meta a:hover { text-decoration: underline; }
+  .filepath {
+    font-family: var(--font);
+    font-size: 17px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: block;
+  }
+  .toc { columns: 2; column-gap: 36px; max-width: 920px; }
+  .toc li { break-inside: avoid; }
+  .verdict-table { border-collapse: collapse; margin-top: 8px; max-width: 920px; }
+  .verdict-table td, .verdict-table th {
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--border-dark);
+    text-align: left;
+    vertical-align: top;
+  }
+  .verdict-table th { color: var(--accent); font-weight: normal; font-size: 16px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .added   { color: var(--accent2); }
+  .removed { color: var(--danger); }
+  .ctx     { color: var(--text-muted); }
+  pre .added   { background: rgba(0, 204, 68, 0.12); display: inline-block; width: 100%; }
+  pre .removed { background: rgba(224, 32, 32, 0.14); display: inline-block; width: 100%; }
+
+  /* Syntax highlighting — hljs token classes mapped to the Win95 palette so a
+     palette swap propagates. If the CDN script below is blocked, these rules
+     simply don't match anything and code renders unstyled. */
+  .hljs-comment, .hljs-quote { color: var(--text-muted); font-style: italic; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: var(--accent); }
+  .hljs-built_in, .hljs-type, .hljs-class .hljs-title, .hljs-title.class_ { color: var(--warn); }
+  .hljs-string, .hljs-attr, .hljs-symbol, .hljs-bullet, .hljs-addition { color: var(--accent2); }
+  .hljs-number, .hljs-meta, .hljs-template-variable, .hljs-variable { color: var(--warn); }
+  .hljs-title, .hljs-name, .hljs-function .hljs-title, .hljs-title.function_ { color: var(--accent); }
+  .hljs-params { color: var(--text); }
+  .hljs-regexp, .hljs-deletion { color: var(--danger); }
+  .hljs-tag, .hljs-tag .hljs-name { color: var(--accent); }
+  .hljs-tag .hljs-attr { color: var(--accent2); }
+  .hljs-emphasis { font-style: italic; }
+  .hljs-strong { font-weight: 700; }
+
+  /* CRT scanline overlay — ported verbatim from crtOverlay in win95.ts
+     (fixed rather than absolute so it spans the whole viewport). */
+  .crt {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.07) 0px, rgba(0,0,0,0.07) 1px, transparent 1px, transparent 4px);
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- ====================== TITLE SLIDE ====================== -->
+  <section class="slide active" id="title">
+    <h1>PR #<N> — <PR TITLE></h1>
+    <p class="subtitle">A walkthrough review · use <kbd>→</kbd> / <kbd>←</kbd> or <kbd>Space</kbd> to navigate</p>
+
+    <p class="meta">
+      <strong>Author:</strong> <AUTHOR> &nbsp;·&nbsp;
+      <strong>State:</strong> <STATE> &nbsp;·&nbsp;
+      <strong>Size:</strong> +<ADD> / −<DEL> across <N> files &nbsp;·&nbsp;
+      <strong>Ticket:</strong> <TICKET>
+    </p>
+    <p class="meta">
+      <a href="<PR_URL>" target="_blank"><PR_URL></a>
+    </p>
+
+    <h2 style="margin-top:32px">What we're reviewing</h2>
+    <ol class="toc">
+      <li>What the PR does</li>
+      <li>Architecture / shape</li>
+      <li>...</li>
+      <li>Strengths</li>
+      <li>Concerns &amp; questions</li>
+      <li>Verdict</li>
+    </ol>
+  </section>
+
+  <!-- ====================== CONTENT SLIDE EXAMPLE ====================== -->
+  <section class="slide" id="info-1">
+    <h2>What this PR does</h2>
+    <p>One-paragraph plain-English summary of the change. Aim for "what behavior changed" rather than "what code moved where".</p>
+
+    <div class="callout">
+      <div class="label">behavior</div>
+      Concise statement of the user-visible effect.
+    </div>
+
+    <p><strong>Surfaces touched:</strong></p>
+    <ul>
+      <li>Path A — what changed there.</li>
+      <li>Path B — what changed there.</li>
+    </ul>
+  </section>
+
+  <!-- ====================== CODE FOCUS SLIDE EXAMPLE ====================== -->
+  <section class="slide" id="d1">
+    <h2>The interesting decision: &lt;name&gt;</h2>
+    <span class="filepath">path/to/file.tsx — lines XX–YY</span>
+<pre><code class="language-tsx">const example = (request) =&gt; {
+  // The code block the reviewer should focus on.
+  return request.something;
+};</code></pre>
+
+    <div class="callout good">
+      <div class="label">why this is the right call</div>
+      <ol>
+        <li>Reason one.</li>
+        <li>Reason two.</li>
+      </ol>
+    </div>
+
+    <p class="meta">Optional follow-up question the reviewer would ask here.</p>
+  </section>
+
+  <!-- ====================== BEFORE/AFTER SLIDE EXAMPLE ====================== -->
+  <section class="slide" id="d2">
+    <h2>Before vs. after</h2>
+    <div class="grid-2">
+      <div>
+        <p class="meta"><strong>Before</strong></p>
+<pre><code class="language-tsx">// old shape</code></pre>
+      </div>
+      <div>
+        <p class="meta"><strong>After</strong></p>
+<pre><code class="language-tsx">// new shape</code></pre>
+      </div>
+    </div>
+    <p>One-sentence summary of what changed and why.</p>
+  </section>
+
+  <!-- ====================== STRENGTHS SLIDE EXAMPLE ====================== -->
+  <section class="slide" id="strengths">
+    <h2>Strengths</h2>
+    <ul>
+      <li><span class="pill good">design</span> One-sentence strength.</li>
+      <li><span class="pill good">correctness</span> Another.</li>
+      <li><span class="pill good">tests</span> Another.</li>
+    </ul>
+  </section>
+
+  <!-- ====================== CONCERNS SLIDE EXAMPLE ====================== -->
+  <section class="slide" id="concerns">
+    <h2>Concerns &amp; questions</h2>
+
+    <div class="callout warn">
+      <div class="label">1 · &lt;concern title&gt;</div>
+      Body of the concern. Be specific. Cite file:line.
+    </div>
+
+    <div class="callout">
+      <div class="label">2 · &lt;less-severe note&gt;</div>
+      Body.
+    </div>
+  </section>
+
+  <!-- ====================== VERDICT SLIDE EXAMPLE ====================== -->
+  <section class="slide" id="verdict">
+    <h2>Verdict</h2>
+    <p><span class="pill good">Approve with comments.</span> Or whatever fits.</p>
+
+    <h3 style="margin-top:24px;font-size:18px;color:var(--muted)">Suggested before merge</h3>
+    <table class="verdict-table">
+      <tr><th>#</th><th>Ask</th><th>Cost</th></tr>
+      <tr>
+        <td>1</td>
+        <td>The ask, briefly.</td>
+        <td>XS / S / M / L</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:32px;color:var(--muted);font-size:15px">— end —</p>
+  </section>
+
+</div>
+
+<div class="nav">
+  <div class="nav-inner">
+    <button id="prev" aria-label="Previous slide">← Prev</button>
+    <span class="counter" id="counter">1 / 1</span>
+    <button id="next" aria-label="Next slide">Next →</button>
+  </div>
+</div>
+
+<!-- CRT scanline overlay sits above the deck; pointer-events:none lets clicks through. -->
+<div class="crt" aria-hidden="true"></div>
+
+<script>
+  // Routing is keyed on each slide's stable `id`, not its DOM index. The
+  // current position is derived fresh from DOM order on every navigation, so
+  // inserting / reordering / dimming a slide never invalidates another
+  // slide's #anchor. We track the *active id*, not an index.
+  const counter = document.getElementById('counter');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const progress = document.getElementById('progress');
+
+  // Live DOM order, recomputed each call so the deck can be edited in place.
+  const slides = () => Array.from(document.querySelectorAll('.slide'));
+  // Ensure every slide has an id; synthesize a stable fallback if one is
+  // missing so routing never breaks on a hand-edited deck.
+  slides().forEach((s, j) => { if (!s.id) s.id = `slide-${j + 1}`; });
+
+  let activeId = null;
+
+  function indexOfId(id) {
+    const all = slides();
+    const idx = all.findIndex(s => s.id === id);
+    return idx === -1 ? 0 : idx;
+  }
+
+  // Navigate to a slide by its stable id.
+  function goToId(id) {
+    const all = slides();
+    let idx = all.findIndex(s => s.id === id);
+    if (idx === -1) idx = 0;
+    activeId = all[idx].id;
+    all.forEach(s => s.classList.toggle('active', s.id === activeId));
+    counter.textContent = `${idx + 1} / ${all.length}`;
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === all.length - 1;
+    progress.style.width = `${((idx + 1) / all.length) * 100}%`;
+    if (location.hash !== `#${activeId}`) {
+      history.replaceState(null, '', `#${activeId}`);
+    }
+    all[idx].scrollTop = 0;
+  }
+
+  // Navigate by position relative to the current slide's live DOM index.
+  function goByOffset(delta) {
+    const all = slides();
+    const idx = Math.max(0, Math.min(all.length - 1, indexOfId(activeId) + delta));
+    goToId(all[idx].id);
+  }
+
+  // Navigate to the Nth slide in current DOM order (1-based). Used by the
+  // number keys and Home/End — a positional convenience, distinct from the
+  // id-stable #anchors.
+  function goToPosition(n) {
+    const all = slides();
+    const idx = Math.max(0, Math.min(all.length - 1, n - 1));
+    goToId(all[idx].id);
+  }
+
+  prevBtn.addEventListener('click', () => goByOffset(-1));
+  nextBtn.addEventListener('click', () => goByOffset(1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+      e.preventDefault();
+      goByOffset(1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      e.preventDefault();
+      goByOffset(-1);
+    } else if (e.key === 'Home') {
+      goToPosition(1);
+    } else if (e.key === 'End') {
+      goToPosition(slides().length);
+    } else if (/^[0-9]$/.test(e.key)) {
+      goToPosition(parseInt(e.key, 10));
+    }
+  });
+
+  // Respond to manual hash edits / back-forward navigation.
+  window.addEventListener('hashchange', () => {
+    const id = (location.hash || '').slice(1);
+    if (id && id !== activeId) goToId(id);
+  });
+
+  // Initial slide: resolve the hash as a stable id (#d3 -> id="d3"). Fall
+  // back to the first slide if the hash is empty or names a missing id.
+  const startId = (location.hash || '').slice(1);
+  goToId(startId || slides()[0].id);
+</script>
+
+<!--
+  Syntax highlighter. Loaded from cdnjs (one external dep — the only
+  exception to the otherwise self-contained rule, justified because
+  shipping a full lexer inline would dwarf the rest of the file).
+  Token colors are defined locally in the <style> block above so they
+  inherit the active palette. If the CDN is blocked, code
+  blocks render unstyled — readable, just monochrome.
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js" defer></script>
+<script defer>
+  window.addEventListener('load', () => {
+    if (window.hljs) {
+      document.querySelectorAll('pre code').forEach(block => {
+        // Skip blocks we styled manually with .added / .removed spans
+        // (diff-style hand-rolled highlighting — leave them alone).
+        if (block.querySelector('.added, .removed')) return;
+        window.hljs.highlightElement(block);
+      });
+    }
+  });
+</script>
+</body>
+</html>
