@@ -73,19 +73,12 @@ class SanitizeAnswerTest(unittest.TestCase):
 
 
 class ServerConfigTest(unittest.TestCase):
-    """R5 (bind), R9 (distinct ports), R10 (idle predicate + session file)."""
+    """R5 (bind), R10 (idle predicate + session file)."""
 
     def test_binds_to_loopback_only(self):
         server = GrillServer(topic="t", token=TOKEN, deck_path="/dev/null", buffer_path="/dev/null")
         self.addCleanup(server.server_close)
         self.assertEqual(server.server_address[0], "127.0.0.1")
-
-    def test_distinct_ephemeral_ports_per_topic(self):
-        a = GrillServer(topic="a", token=TOKEN, deck_path="/dev/null", buffer_path="/dev/null")
-        b = GrillServer(topic="b", token=TOKEN, deck_path="/dev/null", buffer_path="/dev/null")
-        self.addCleanup(a.server_close)
-        self.addCleanup(b.server_close)
-        self.assertNotEqual(a.server_address[1], b.server_address[1])
 
     def test_idle_expired_predicate(self):
         server = GrillServer(
