@@ -1,9 +1,9 @@
 <!doctype html>
 <!--
   Interactive-grilling INPUT deck. Forked from the shared interactive-pr-review
-  slideshow template (D3: grilling owns this copy so live-input machinery never
-  leaks into the read-only PR-review deck). Theme, routing, and keyboard nav are
-  inherited verbatim; the input layer below is grilling-only.
+  slideshow template so live-input machinery never leaks into the read-only
+  PR-review deck. Theme, routing, and keyboard nav are inherited verbatim; the
+  input layer below is grilling-only.
 
   USAGE
   -----
@@ -20,8 +20,8 @@
   (keyed by the stable slide id), fires a fire-and-forget POST /answers, and
   re-runs evaluateGuards(). Nothing blocks; the bridge is optional.
 
-  GUARD SYNTAX (client-side branching, zero network — D1/D10)
-  -----------------------------------------------------------
+  GUARD SYNTAX (client-side branching, zero network)
+  --------------------------------------------------
   A slide may declare `data-active-if="D2=A,B;D5=yes"`:
     - `;` ANDs conditions across decisions.
     - `,` ORs allowed values within one decision (membership test).
@@ -29,8 +29,8 @@
   It FAILS OPEN: an unparseable guard, or one naming an unanswered decision,
   leaves the slide visible — a spurious question beats a silently-hidden one.
 
-  ANSWER + INJECTION CONTRACT (answers cross as DATA, never instructions — D2)
-  ---------------------------------------------------------------------------
+  ANSWER + INJECTION CONTRACT (answers cross as DATA, never instructions)
+  -----------------------------------------------------------------------
   POST /answers body: {topic, decision:"D3", choice:"B"|null, reasoning, notes, ts}.
   The server whitelists exactly those keys and coerces them to strings.
   Agent -> deck over SSE /events:
@@ -667,12 +667,10 @@
   const GRILL_TOPIC = meta('grill-topic');
   const AUTOSAVE_PREFIX = `grill:${GRILL_TOPIC || 'deck'}:`;
 
-  const decisionSlides = () => Array.from(document.querySelectorAll('.slide[data-decision]'));
-
   // Current answers as {D1:"A", ...} — read live from the checked radios.
   function currentSelections() {
     const sel = {};
-    decisionSlides().forEach(slide => {
+    document.querySelectorAll('.slide[data-decision]').forEach(slide => {
       const checked = slide.querySelector('input[type="radio"]:checked');
       if (checked) sel[slide.dataset.decision] = checked.value;
     });
@@ -731,22 +729,31 @@
     localStorage.setItem(AUTOSAVE_PREFIX + slide.id, JSON.stringify(payload));
   }
 
-  function restoreSlide(slide) {
-    const raw = localStorage.getItem(AUTOSAVE_PREFIX + slide.id);
-    if (!raw) return;
-    const saved = JSON.parse(raw);
-    if (saved.choice != null) {
-      const radio = slide.querySelector(`input[type="radio"][value="${CSS.escape(saved.choice)}"]`);
+  // The single write path into a slide's widgets, shared by localStorage restore
+  // and agent SSE echoes. User-typed text always lands via .value, never
+  // innerHTML — the XSS boundary that matters when replaying relayed answers.
+  function writeAnswer(slide, { choice, reasoning, notes }) {
+    if (choice != null) {
+      const radio = slide.querySelector(`input[type="radio"][value="${CSS.escape(choice)}"]`);
       if (radio) radio.checked = true;
     }
-    const reasoning = slide.querySelector('[data-role="reasoning"]');
-    if (reasoning && typeof saved.reasoning === 'string') reasoning.value = saved.reasoning;
-    const notes = slide.querySelector('[data-role="notes"]');
-    if (notes && typeof saved.notes === 'string') notes.value = saved.notes;
+    if (typeof reasoning === 'string') {
+      const r = slide.querySelector('[data-role="reasoning"]');
+      if (r) r.value = reasoning;
+    }
+    if (typeof notes === 'string') {
+      const n = slide.querySelector('[data-role="notes"]');
+      if (n) n.value = notes;
+    }
+  }
+
+  function restoreSlide(slide) {
+    const raw = localStorage.getItem(AUTOSAVE_PREFIX + slide.id);
+    if (raw) writeAnswer(slide, JSON.parse(raw));
   }
 
   // Agent -> deck. Branch HTML is agent-authored (trusted, over the token'd
-  // channel) so append uses innerHTML; user-typed echoes go via .value only.
+  // channel) so append uses innerHTML; user-typed echoes go via writeAnswer.
   function appendSlide(id, html) {
     if (!id || document.getElementById(id)) return;   // Append-only; never reuse an id.
     const tpl = document.createElement('template');
@@ -759,18 +766,7 @@
     const slide = (op.id && document.getElementById(op.id))
       || document.querySelector(`.slide[data-decision="${CSS.escape(op.decision || '')}"]`);
     if (!slide) return;
-    if (op.choice != null) {
-      const radio = slide.querySelector(`input[type="radio"][value="${CSS.escape(op.choice)}"]`);
-      if (radio) radio.checked = true;
-    }
-    if (typeof op.reasoning === 'string') {
-      const r = slide.querySelector('[data-role="reasoning"]');
-      if (r) r.value = op.reasoning;
-    }
-    if (typeof op.notes === 'string') {
-      const n = slide.querySelector('[data-role="notes"]');
-      if (n) n.value = op.notes;
-    }
+    writeAnswer(slide, op);
     saveSlide(slide);
   }
 

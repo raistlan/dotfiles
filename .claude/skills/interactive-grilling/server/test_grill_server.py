@@ -1,9 +1,9 @@
 """Tests for grill_server — the security- and correctness-load-bearing bridge.
 
 Stdlib unittest only (matches the dotfiles bash+python3 convention; no runtime
-deps). Covers R5 (token + loopback bind), R6 (answers-as-data whitelist),
-R7 (gap-safe poll queue), R8 (inject -> SSE frame), R9/R10 (ports, idle
-teardown, session-file lifecycle), R13 (last-write-wins by ts).
+deps). Covers token + loopback bind, the answers-as-data whitelist, the gap-safe
+poll queue, inject -> SSE frame fan-out, idle teardown + session-file lifecycle,
+and last-write-wins by ts.
 """
 
 import http.client
@@ -26,7 +26,7 @@ def _serve(server):
 
 
 class SanitizeAnswerTest(unittest.TestCase):
-    """R6 — answers are treated as DATA: whitelist keys, coerce to str."""
+    """Answers are treated as DATA: whitelist keys, coerce to str."""
 
     def test_keeps_only_whitelisted_keys(self):
         raw = {
@@ -73,7 +73,7 @@ class SanitizeAnswerTest(unittest.TestCase):
 
 
 class ServerConfigTest(unittest.TestCase):
-    """R5 (bind), R10 (idle predicate + session file)."""
+    """Loopback bind, idle predicate, and session-file lifecycle."""
 
     def test_binds_to_loopback_only(self):
         server = GrillServer(topic="t", token=TOKEN, deck_path="/dev/null", buffer_path="/dev/null")
@@ -114,7 +114,7 @@ class ServerConfigTest(unittest.TestCase):
 
 
 class ServerHTTPTest(unittest.TestCase):
-    """R5 (token), R6/R7 (answers -> poll), R8 (inject -> events), R13 (ts order)."""
+    """Token auth, answers -> poll, inject -> events, and ts ordering."""
 
     def setUp(self):
         self.deck = Path(tempfile.mktemp(prefix="grill-test-deck-", suffix=".html"))
@@ -201,7 +201,7 @@ class ServerHTTPTest(unittest.TestCase):
                                     "reasoning": "r", "notes": "n", "ts": "5"})
 
     def test_poll_buffers_submits_arriving_in_the_gap(self):
-        """R7 — submits landing with no poll waiting are not lost."""
+        """Submits landing with no poll waiting are not lost."""
         self._post_answer("D1", "A", 1)
         self._post_answer("D2", "B", 2)
         status, data = self._request("GET", "/poll?wait=1")
@@ -210,7 +210,7 @@ class ServerHTTPTest(unittest.TestCase):
         self.assertEqual({i["decision"] for i in items}, {"D1", "D2"})
 
     def test_poll_orders_batch_by_ts_last_write_wins(self):
-        """R13 — a later ts sorts last so the agent's last apply wins."""
+        """A later ts sorts last so the agent's last apply wins."""
         self._post_answer("D3", "A", 2)
         self._post_answer("D3", "B", 1)
         status, data = self._request("GET", "/poll?wait=1")
@@ -218,7 +218,7 @@ class ServerHTTPTest(unittest.TestCase):
         self.assertEqual([i["choice"] for i in items], ["B", "A"])
 
     def test_inject_fans_out_one_sse_frame(self):
-        """R8 — POST /inject delivers a data: frame to a live /events stream."""
+        """POST /inject delivers a data: frame to a live /events stream."""
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         conn.request("GET", f"/events?token={TOKEN}")
         resp = conn.getresponse()
