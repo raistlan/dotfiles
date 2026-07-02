@@ -35,6 +35,9 @@ probe_health() {
 
 sf_field() { jq -r ".$2 // empty" "$(session_path "$1")"; }
 
+# Kill a pid if it is set and still alive; never abort under set -e.
+kill_if_alive() { [ -n "$1" ] && kill -0 "$1" 2>/dev/null && kill "$1" 2>/dev/null || true; }
+
 topic="${2:-}"
 
 case "${1:-}" in
@@ -53,8 +56,8 @@ case "${1:-}" in
         exit 0
       fi
       # Session file present but the server is gone or on a recycled port. Clean
-      # up any stray process (kill -0 first) and respawn.
-      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then kill "$pid" 2>/dev/null || true; fi
+      # up any stray process and respawn.
+      kill_if_alive "$pid"
       rm -f "$sf"
     fi
 
@@ -125,8 +128,7 @@ case "${1:-}" in
     [ -n "$topic" ] || fail "usage: grill stop <topic>"
     sf="$(session_path "$topic")"
     if [ ! -f "$sf" ]; then echo "grill: no session for '$topic'"; exit 0; fi
-    pid="$(sf_field "$topic" pid)"
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then kill "$pid" 2>/dev/null || true; fi
+    kill_if_alive "$(sf_field "$topic" pid)"
     rm -f "$sf"
     echo "grill: stopped '$topic'"
     ;;

@@ -4,8 +4,8 @@
 A dumb bridge, deliberately: the deck POSTs answers, the agent long-polls them,
 the agent POSTs injections, the deck streams them over SSE. It never parses an
 answer as an instruction — answers are whitelisted, coerced to strings, and
-handed to the agent as data (R6). The security posture is loopback bind +
-per-session token (R5); the agent is the sole buffer writer (R13).
+handed to the agent as data. The security posture is loopback bind +
+per-session token; the agent is the sole buffer writer.
 
 Run standalone (spawned by `bin/grill start`):
     grill_server.py --topic T --token TOK --port 0 --deck DECK --buffer BUF \
@@ -79,7 +79,7 @@ class GrillServer(ThreadingHTTPServer):
         self.last_activity = time.monotonic()
         self._stopped = False
 
-    # --- activity + idle lifecycle (R10) ---
+    # --- activity + idle lifecycle ---
 
     def touch_activity(self):
         self.last_activity = time.monotonic()
@@ -106,7 +106,7 @@ class GrillServer(ThreadingHTTPServer):
         self._stopped = True
         super().server_close()
 
-    # --- SSE fan-out (R8) ---
+    # --- SSE fan-out ---
 
     def register_subscriber(self, sub):
         with self._subscribers_lock:
@@ -156,7 +156,7 @@ class GrillHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    # --- auth (R5) ---
+    # --- auth ---
 
     def _authed(self, parsed):
         supplied = parse_qs(parsed.query).get("token", [None])[0] or self.headers.get("X-Grill-Token")

@@ -131,7 +131,7 @@ grill start <topic>            # spawns the server, opens the deck ONCE
   `{op:"append", id, html}`. Both apply with no page reload. Pruning is never an inject op —
   it is derived client-side from guards.
 
-## The wake loop (hands-free — R12)
+## The wake loop (hands-free)
 
 Run the poller as a **background Bash task**:
 
