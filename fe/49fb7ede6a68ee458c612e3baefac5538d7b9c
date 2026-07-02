@@ -1,0 +1,19 @@
+.claude/skills/interactive-grilling/references/slideshow-template.html
+  s_6dbedfb3daad54::t_751a61e6636739 160,195,225,236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "fe49fb7ede6a68ee458c612e3baefac5538d7b9c",
+  "prompts": {},
+  "sessions": {
+    "s_6dbedfb3daad54": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7500f6a-7c85-4482-afc3-4e9c2d0a1663",
+        "model": "unknown"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
