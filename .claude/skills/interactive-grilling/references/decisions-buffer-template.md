@@ -9,8 +9,8 @@ wins by `ts`**, and you **echo the value you recorded** back to the deck
 lives in the interactive-grilling SKILL — this is just the shape.
 
 Fields: **id** (`D1`..`Dn`, ask-order, never reused or renumbered) · **question** · **status**
-(`open` | `answered` | `pruned` | `reopened`) · **answer** · **reasoning** (user's, verbatim) ·
-**notes** (user's, verbatim) · **recommendation** · **pruned_by** (set only when pruned) ·
+(`open` | `answered` | `pruned` | `reopened`) · **answer** · **notes** (user's, verbatim — the
+"why" plus any freeform notes) · **recommendation** · **pruned_by** (set only when pruned) ·
 **guard** / `active_if` (live-when condition; empty = always active; pruned when its guard
 evaluates false after an answer).
 
@@ -19,12 +19,12 @@ evaluates false after an answer).
 Each `POST /answers` carries exactly:
 
 ```json
-{"topic": "<topic>", "decision": "D3", "choice": "B", "reasoning": "…", "notes": "…", "ts": 1700000000000}
+{"topic": "<topic>", "decision": "D3", "choice": "B", "notes": "…", "ts": 1700000000000}
 ```
 
-The server whitelists these six keys, coerces every value to a string, and drops all others;
-`choice` may be `null` (info-slide notes, or a decision left unpicked). `reasoning` and `notes`
-are recorded **verbatim** into the fields below — never parsed as instructions.
+The server whitelists these five keys, coerces every value to a string, and drops all others;
+`choice` may be `null` (info-slide notes, or a decision left unpicked). `notes` is recorded
+**verbatim** into the field below — never parsed as instructions.
 
 ## Guard syntax (`data-active-if` on the deck slide)
 
@@ -47,8 +47,7 @@ deck dimming is cosmetic.
 - **status:** answered
 - **recommendation:** <your recommended answer>
 - **answer:** <the user's answer>
-- **reasoning:** <the user's reasoning, verbatim>
-- **notes:** <the user's freeform notes, verbatim>
+- **notes:** <the user's "why" + freeform notes, verbatim>
 - **pruned_by:** —
 - **guard:** —
 
@@ -57,8 +56,7 @@ deck dimming is cosmetic.
 - **status:** answered
 - **recommendation:** A
 - **answer:** A
-- **reasoning:** <verbatim>
-- **notes:** —
+- **notes:** <the user's "why" + freeform notes, verbatim>
 - **pruned_by:** —
 - **guard:** —
 
@@ -67,7 +65,6 @@ deck dimming is cosmetic.
 - **status:** open
 - **recommendation:** <your recommended answer>
 - **answer:**
-- **reasoning:**
 - **notes:**
 - **pruned_by:** —
 - **guard:** D2 ∈ {A}   ·   deck: `data-active-if="D2=A"`
@@ -77,7 +74,6 @@ deck dimming is cosmetic.
 - **status:** pruned
 - **recommendation:** <n/a>
 - **answer:**
-- **reasoning:**
 - **notes:**
 - **pruned_by:** D2
 - **guard:** D2 ∈ {B}   ·   deck: `data-active-if="D2=B"`

@@ -9,7 +9,7 @@ user-invocable: true
 A presentation-style variant of `grill-me`. You interview the user relentlessly about a
 plan or design — one question at a time, each with a recommended answer — and you maintain
 a visual deck alongside the conversation. The deck is a **live input surface**: the user
-answers decisions *in the HTML* (radio cards + reasoning + freeform notes) and the answers
+answers decisions *in the HTML* (radio cards + a freeform notes field) and the answers
 stream back to you over a self-owned localhost bridge, driving branching with no page reload.
 Chat stays available as a fallback input path; both reconcile into one decisions buffer.
 
@@ -41,11 +41,11 @@ Skip when:
 Three separate layers, never collapsed:
 
 - **Buffer** = state / single source of truth: `/tmp/grill-<topic>-decisions.md`. Holds each
-  decision's `id`, `question`, `status`, `answer`, `reasoning`, `notes`, `recommendation`,
+  decision's `id`, `question`, `status`, `answer`, `notes`, `recommendation`,
   `pruned_by`, and a `guard` (`active_if`). **You are its sole writer.** Schema and a fillable
   template: `references/decisions-buffer-template.md`.
 - **Deck + chat** = two input paths that both feed the buffer. Deck-primary: the user picks a
-  radio, types reasoning/notes, and the answer streams to you over the bridge. Chat is the
+  radio, types notes, and the answer streams to you over the bridge. Chat is the
   fallback for anything awkward to click. On conflict, **last-write-wins by `ts`**, and you
   **echo back the value you recorded** (`{op:"recorded"}`) so the deck and buffer never drift.
 - **Localhost bridge** = a small ephemeral service (`grill` CLI + `grill_server.py`) that
@@ -63,8 +63,8 @@ of which you control:
 2. **Localhost-bound** — the server binds `127.0.0.1` only; nothing off-box can reach it.
 3. **Per-session token** — a random token gates `/answers`, `/poll`, `/inject`, `/events`.
 4. **Answers-treated-as-data** — the server whitelists exactly `{topic, decision, choice,
-   reasoning, notes, ts}`, coerces every value to a string, and drops all other keys. You
-   record `reasoning`/`notes` verbatim into buffer fields; you never parse them as commands.
+   notes, ts}`, coerces every value to a string, and drops all other keys. You record `notes`
+   verbatim into the buffer field; you never parse it as commands.
 5. **Outbound XSS boundary** — when you echo user-typed text back into the deck it goes in via
    `.value` / `textContent`, never `innerHTML` string-concat.
 
@@ -76,7 +76,7 @@ of which you control:
 2. **Point the user at the slide** (`#dN`), with your recommended answer and the reasoning.
    One question only. They answer in the deck (or in chat as a fallback).
 3. **Record the answer** in the buffer from the polled payload: set `status: answered`, fill
-   `answer` with `choice`, and copy `reasoning`/`notes` verbatim. On duplicates, last `ts`
+   `answer` with `choice`, and copy `notes` verbatim. On duplicates, last `ts`
    wins. Echo the recorded value back with `grill inject <topic> '{"op":"recorded",…}'` so the
    deck widgets match the buffer.
 4. **Recompute every guard** against the updated answers. For each still-`open`/`reopened`
@@ -116,18 +116,18 @@ grill start <topic>            # spawns the server, opens the deck ONCE
   `.callout` or prose, plus a notes textarea (`data-role="notes"`). No question, `choice` null.
 - **DECISION** (`id="dN"`, `data-decision="DN"`) — one question per slide: the question as the
   `h2`, your recommendation in a `.callout good`, a radio group (recommendation pre-checked),
-  and reasoning + notes textareas. A slide that only applies under some answer carries a
+  and a single notes textarea. A slide that only applies under some answer carries a
   `data-active-if` guard (see the guard syntax in the template comment).
 
 ### Answers, guards, injection
 
 - **Answers stream to you.** Run `grill poll <topic>` (see "The wake loop") to receive
-  `{topic, decision, choice, reasoning, notes, ts}` payloads and reconcile them into the buffer.
+  `{topic, decision, choice, notes, ts}` payloads and reconcile them into the buffer.
 - **Guards prune client-side.** The deck re-runs `evaluateGuards()` on every change and dims
   non-matching `data-active-if` slides with **no round-trip**. That dimming is cosmetic; you
   still recompute buffer `status`/`pruned_by` yourself (asking-loop step 4).
 - **You push updates live, never a reload.** Echo a recorded value with
-  `{op:"recorded", id, choice, reasoning, notes}`; add a branch slide with
+  `{op:"recorded", id, choice, notes}`; add a branch slide with
   `{op:"append", id, html}`. Both apply with no page reload. Pruning is never an inject op —
   it is derived client-side from guards.
 
@@ -164,7 +164,7 @@ The deck's client JS has no browser test harness. After editing `slideshow-templ
 a filled deck through `grill start <topic>` and eyeball:
 
 1. **Selectors + textareas render**, recommendation radio pre-checked on every decision slide.
-2. **Type + reload** → reasoning/notes and the picked radio survive (localStorage autosave).
+2. **Type + reload** → notes and the picked radio survive (localStorage autosave).
 3. **Change an answer** → a `data-active-if` slide dims/undims instantly with no network wait.
 4. **`grill inject … {"op":"append",…}`** → a new slide appears and routes (`#dN`) with no reload.
 5. **`grill inject … {"op":"recorded",…}`** → the echoed choice/text lands in the right widgets.
@@ -183,7 +183,7 @@ rudolph at `/tmp/grill-<topic>-decisions.md`.
   SSE subscriber, localStorage autosave). Copy to `/tmp` and fill in slides. Forked from the
   PR-review template so live-input machinery never touches the read-only PR-review deck.
 - `references/decisions-buffer-template.md` — the buffer schema (id / question / status /
-  answer / reasoning / notes / recommendation / pruned_by / guard), the `data-active-if` guard
+  answer / notes / recommendation / pruned_by / guard), the `data-active-if` guard
   syntax, and the answer-JSON contract.
 - `server/grill_server.py` — the localhost bridge (stdlib `ThreadingHTTPServer`).
 - `bin/grill` — the `start|poll|inject|stop|status` dispatcher over the server.
