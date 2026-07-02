@@ -33,7 +33,6 @@ class SanitizeAnswerTest(unittest.TestCase):
             "topic": "t",
             "decision": "D3",
             "choice": "B",
-            "reasoning": "because",
             "notes": "a note",
             "ts": 1700000000,
         }
@@ -43,13 +42,12 @@ class SanitizeAnswerTest(unittest.TestCase):
                 "topic": "t",
                 "decision": "D3",
                 "choice": "B",
-                "reasoning": "because",
                 "notes": "a note",
                 "ts": "1700000000",
             },
         )
 
-    def test_drops_injection_shaped_and_unknown_keys(self):
+    def test_drops_injection_shaped_and_retired_keys(self):
         raw = {
             "decision": "D3",
             "choice": "B",
@@ -58,13 +56,14 @@ class SanitizeAnswerTest(unittest.TestCase):
             "__import__": "os",
             "id": "d99",
             "extra": {"nested": 1},
+            "reasoning": "retired field, must be dropped",
         }
         self.assertEqual(sanitize_answer(raw), {"decision": "D3", "choice": "B"})
 
     def test_coerces_non_string_values_to_str(self):
-        out = sanitize_answer({"decision": "D3", "ts": 42, "reasoning": ["a"]})
+        out = sanitize_answer({"decision": "D3", "ts": 42, "notes": ["a"]})
         self.assertEqual(out["ts"], "42")
-        self.assertEqual(out["reasoning"], "['a']")
+        self.assertEqual(out["notes"], "['a']")
 
     def test_choice_may_be_null(self):
         out = sanitize_answer({"decision": "info-1", "choice": None, "notes": "n"})
@@ -152,7 +151,7 @@ class ServerHTTPTest(unittest.TestCase):
         status, _ = self._request(
             "POST",
             "/answers",
-            {"topic": "mytopic", "decision": decision, "choice": choice, "reasoning": "", "notes": "", "ts": ts},
+            {"topic": "mytopic", "decision": decision, "choice": choice, "notes": "", "ts": ts},
         )
         self.assertEqual(status, 200)
 
@@ -189,7 +188,7 @@ class ServerHTTPTest(unittest.TestCase):
         status, _ = self._request(
             "POST",
             "/answers",
-            {"topic": "mytopic", "decision": "D3", "choice": "B", "reasoning": "r", "notes": "n",
+            {"topic": "mytopic", "decision": "D3", "choice": "B", "notes": "n",
              "ts": 5, "op": "append", "html": "<script>"},
         )
         self.assertEqual(status, 200)
@@ -198,7 +197,7 @@ class ServerHTTPTest(unittest.TestCase):
         items = json.loads(data)
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0], {"topic": "mytopic", "decision": "D3", "choice": "B",
-                                    "reasoning": "r", "notes": "n", "ts": "5"})
+                                    "notes": "n", "ts": "5"})
 
     def test_poll_buffers_submits_arriving_in_the_gap(self):
         """Submits landing with no poll waiting are not lost."""

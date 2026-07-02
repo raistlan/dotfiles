@@ -15,8 +15,8 @@
   INPUT LAYER (grilling-only)
   ---------------------------
   A decision slide carries `data-decision="D3"`, a radio group (recommendation
-  pre-checked), a reasoning textarea, and a notes textarea. An info slide carries
-  a notes textarea only. On every change the deck: autosaves to localStorage
+  pre-checked), and a single notes textarea (the "why" plus any notes). An info
+  slide carries a notes textarea only. On every change the deck: autosaves to localStorage
   (keyed by the stable slide id), fires a fire-and-forget POST /answers, and
   re-runs evaluateGuards(). Nothing blocks; the bridge is optional.
 
@@ -31,10 +31,10 @@
 
   ANSWER + INJECTION CONTRACT (answers cross as DATA, never instructions)
   -----------------------------------------------------------------------
-  POST /answers body: {topic, decision:"D3", choice:"B"|null, reasoning, notes, ts}.
+  POST /answers body: {topic, decision:"D3", choice:"B"|null, notes, ts}.
   The server whitelists exactly those keys and coerces them to strings.
   Agent -> deck over SSE /events:
-    {op:"recorded", id|decision, choice, reasoning, notes} echoes the recorded
+    {op:"recorded", id|decision, choice, notes} echoes the recorded
       value back into the widgets (user-typed text is written via .value /
       textContent, never innerHTML).
     {op:"append", id, html} injects an agent-authored branch <section>; routing
@@ -442,7 +442,6 @@
     color: var(--text-muted);
     margin: 12px 0 4px;
   }
-  textarea.reasoning,
   textarea.notes {
     width: 100%;
     max-width: 920px;
@@ -460,7 +459,6 @@
     border-bottom-color: var(--border-light);
     border-right-color: var(--border-light);
   }
-  textarea.reasoning:focus,
   textarea.notes:focus { outline: 1px solid var(--accent); }
 
   /* CRT scanline overlay — ported verbatim from crtOverlay in win95.ts
@@ -507,7 +505,7 @@
     </div>
 
     <label class="field-label" for="notes-info-1">Notes</label>
-    <textarea class="notes" id="notes-info-1" data-role="notes" placeholder="Anything you want to jot here."></textarea>
+    <textarea class="notes" id="notes-info-1" data-role="notes" placeholder="Notes…"></textarea>
   </section>
 
   <!-- ====================== DECISION SLIDE (unguarded) ====================== -->
@@ -524,10 +522,8 @@
       <label class="option"><input type="radio" name="D1" value="B"><span>B — second option</span></label>
     </div>
 
-    <label class="field-label" for="reasoning-d1">Reasoning</label>
-    <textarea class="reasoning" id="reasoning-d1" data-role="reasoning" placeholder="Why you chose what you chose."></textarea>
     <label class="field-label" for="notes-d1">Notes</label>
-    <textarea class="notes" id="notes-d1" data-role="notes"></textarea>
+    <textarea class="notes" id="notes-d1" data-role="notes" placeholder="Why this choice? Any notes…"></textarea>
   </section>
 
   <!-- ====================== DECISION SLIDE (guarded by D1) ====================== -->
@@ -544,10 +540,8 @@
       <label class="option"><input type="radio" name="D2" value="no"><span>no</span></label>
     </div>
 
-    <label class="field-label" for="reasoning-d2">Reasoning</label>
-    <textarea class="reasoning" id="reasoning-d2" data-role="reasoning"></textarea>
     <label class="field-label" for="notes-d2">Notes</label>
-    <textarea class="notes" id="notes-d2" data-role="notes"></textarea>
+    <textarea class="notes" id="notes-d2" data-role="notes" placeholder="Why this choice? Any notes…"></textarea>
   </section>
 
 </div>
@@ -701,13 +695,11 @@
 
   function slidePayload(slide) {
     const checked = slide.querySelector('input[type="radio"]:checked');
-    const reasoning = slide.querySelector('[data-role="reasoning"]');
     const notes = slide.querySelector('[data-role="notes"]');
     return {
       topic: GRILL_TOPIC,
       decision: slide.dataset.decision || slide.id,
       choice: checked ? checked.value : null,
-      reasoning: reasoning ? reasoning.value : '',
       notes: notes ? notes.value : '',
       ts: Date.now(),
     };
@@ -732,14 +724,10 @@
   // The single write path into a slide's widgets, shared by localStorage restore
   // and agent SSE echoes. User-typed text always lands via .value, never
   // innerHTML — the XSS boundary that matters when replaying relayed answers.
-  function writeAnswer(slide, { choice, reasoning, notes }) {
+  function writeAnswer(slide, { choice, notes }) {
     if (choice != null) {
       const radio = slide.querySelector(`input[type="radio"][value="${CSS.escape(choice)}"]`);
       if (radio) radio.checked = true;
-    }
-    if (typeof reasoning === 'string') {
-      const r = slide.querySelector('[data-role="reasoning"]');
-      if (r) r.value = reasoning;
     }
     if (typeof notes === 'string') {
       const n = slide.querySelector('[data-role="notes"]');

@@ -23,7 +23,7 @@ from urllib.parse import parse_qs, urlparse
 
 # The only keys an answer may carry. Everything else is dropped so a submit can
 # never smuggle an injection op (`op`/`html`) or a dunder past the boundary.
-ANSWER_FIELDS = ("topic", "decision", "choice", "reasoning", "notes", "ts")
+ANSWER_FIELDS = ("topic", "decision", "choice", "notes", "ts")
 
 POLL_WAIT_DEFAULT_S = 25.0
 SSE_HEARTBEAT_S = 15.0
