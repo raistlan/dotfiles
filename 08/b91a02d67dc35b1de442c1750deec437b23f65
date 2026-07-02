@@ -1,0 +1,33 @@
+.claude/skills/interactive-grilling/references/slideshow-template.html
+  s_7eb40373fbc165::t_af448d22a1e152 1-841
+.claude/skills/interactive-grilling/SKILL.md
+  s_7eb40373fbc165::t_f9046f4672b265 11-14,44-69,76-81,85-86,88-90,99-111,115-122,124-132,134,136,138-140,142-146,148,150-151,153-154,161-171,181-184,186-189
+.claude/skills/interactive-grilling/bin/grill
+  s_ca8e3b1e9bdf26::t_c4f8f7429f6c53 1-149
+.claude/skills/interactive-grilling/server/grill_server.py
+  s_7eb40373fbc165::t_e98e794561de8e 1-271
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "08b91a02d67dc35b1de442c1750deec437b23f65",
+  "prompts": {},
+  "sessions": {
+    "s_7eb40373fbc165": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c0a66a3-eb5f-4dba-9f13-0c47269eb69b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    },
+    "s_ca8e3b1e9bdf26": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bb7d15f0-30d4-411c-8538-645ae033cd69",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
