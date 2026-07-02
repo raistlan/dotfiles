@@ -1,1 +1,841 @@
-../../interactive-pr-review/references/slideshow-template.html
+<!doctype html>
+<!--
+  Interactive-grilling INPUT deck. Forked from the shared interactive-pr-review
+  slideshow template (D3: grilling owns this copy so live-input machinery never
+  leaks into the read-only PR-review deck). Theme, routing, and keyboard nav are
+  inherited verbatim; the input layer below is grilling-only.
+
+  USAGE
+  -----
+  Copy this file to /tmp/grill-<topic>-deck.html, fill in the slides, then run
+  `grill start <topic>` to bind the localhost bridge and open it once. Opened as
+  a plain file (no bridge) the deck still renders and autosaves locally — it just
+  can't stream answers to the agent.
+
+  INPUT LAYER (grilling-only)
+  ---------------------------
+  A decision slide carries `data-decision="D3"`, a radio group (recommendation
+  pre-checked), a reasoning textarea, and a notes textarea. An info slide carries
+  a notes textarea only. On every change the deck: autosaves to localStorage
+  (keyed by the stable slide id), fires a fire-and-forget POST /answers, and
+  re-runs evaluateGuards(). Nothing blocks; the bridge is optional.
+
+  GUARD SYNTAX (client-side branching, zero network — D1/D10)
+  -----------------------------------------------------------
+  A slide may declare `data-active-if="D2=A,B;D5=yes"`:
+    - `;` ANDs conditions across decisions.
+    - `,` ORs allowed values within one decision (membership test).
+  evaluateGuards() toggles `.pruned` on non-matching slides on every change.
+  It FAILS OPEN: an unparseable guard, or one naming an unanswered decision,
+  leaves the slide visible — a spurious question beats a silently-hidden one.
+
+  ANSWER + INJECTION CONTRACT (answers cross as DATA, never instructions — D2)
+  ---------------------------------------------------------------------------
+  POST /answers body: {topic, decision:"D3", choice:"B"|null, reasoning, notes, ts}.
+  The server whitelists exactly those keys and coerces them to strings.
+  Agent -> deck over SSE /events:
+    {op:"recorded", id|decision, choice, reasoning, notes} echoes the recorded
+      value back into the widgets (user-typed text is written via .value /
+      textContent, never innerHTML).
+    {op:"append", id, html} injects an agent-authored branch <section>; routing
+      picks it up live with no reload. Pruning is client-only, never an inject op.
+
+  STABLE IDS (the routing contract — read this)
+  ---------------------------------------------
+  Every <section class="slide"> MUST carry a stable, unique `id`
+  (id="title", id="info-1", id="d1", id="d2", ...). Navigation, hash routing,
+  and the number-jump key all resolve by id / current DOM position — never by
+  a hardcoded positional index baked into the markup. This means:
+
+    - The hash is the slide's id: #d3 selects the slide with id="d3",
+      regardless of where d3 currently sits in the deck.
+    - Inserting, reordering, or dimming a slide never shifts another slide's
+      anchor. #d3 still points at d3 even after you insert a slide before it.
+    - The counter still shows position ("3 / 11") for orientation, but that
+      number is derived from the live DOM order, not baked into any anchor.
+
+  Convention for consumers: assign ids in CONTENT ORDER, APPEND-ONLY, and
+  NEVER renumber. If a slide becomes obsolete, dim it (don't delete, don't
+  reuse its id); new slides take the next free id. This keeps every previously
+  shared #anchor valid for the life of the deck.
+
+  The number keys (1-9) jump to the Nth slide in current DOM order — a
+  convenience for "go to roughly here", distinct from the id-stable #anchors.
+
+  THEME
+  -----
+  Win95 retro dark theme, ported from the `C` palette and bevel helpers in
+  ledger-sub-7's frontend/app/utils/win95.ts: VT323 monospace, dark surfaces,
+  raised/sunken beveled borders, cyan accent, blue title bars, and a CRT
+  scanline overlay. To retheme, edit the :root variables below — every rule
+  resolves through them. VT323 loads from Google Fonts; if the CDN is blocked
+  it falls back to Courier New, so the deck still renders.
+
+  SLIDE PATTERNS
+  --------------
+  - Title slide: h1, subtitle, meta line (author/size/branch), table of contents.
+  - Content slide: h2, optional .filepath span, code block, .callout for emphasis.
+  - Verdict slide: h2, .verdict-table with asks ranked, suggested cost column.
+
+  CALLOUT VARIANTS
+  ----------------
+  <div class="callout">          — neutral info (cyan)
+  <div class="callout good">     — positive (green)
+  <div class="callout warn">     — caution (amber)
+  <div class="callout danger">   — critical (red)
+  All take a <div class="label">UPPERCASE LABEL</div> as the first child.
+
+  PILLS
+  -----
+  Inline tags: <span class="pill good">design</span>, .pill.warn, .pill.danger, .pill.info.
+  Use to flag what category of feedback a bullet falls under.
+
+  KEYBOARD NAV
+  ------------
+  Arrow keys / Space / PageDown for next, Arrow Left / PageUp for prev,
+  Home/End for first/last, number keys 1-9 to jump.
+
+  SYNTAX HIGHLIGHTING
+  -------------------
+  Add a language class to <code> blocks for syntax colors:
+    <pre><code class="language-tsx">...</code></pre>
+    <pre><code class="language-python">...</code></pre>
+    <pre><code class="language-sql">...</code></pre>
+  Supported languages match highlight.js's common bundle (ts, tsx, js, jsx,
+  python, ruby, go, rust, sql, json, yaml, bash, html, css, diff, etc.).
+  Code without a language class falls back to auto-detection. The
+  highlighter is loaded from cdnjs; if the CDN is blocked the code still
+  renders, just without colors.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Grilling — <TOPIC></title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* Win95 retro dark palette — mirrors the `C` object in win95.ts. */
+  :root {
+    --bg: #0d0d0d;
+    --surface: #1c1c1c;
+    --surface-alt: #222222;
+    --border-light: #9a9a9a;
+    --border-mid: #666666;
+    --border-dark: #3a3a3a;
+    --text: #d8d8d8;
+    --text-muted: #686868;
+    --text-dim: #484848;
+    --title-bar: #000088;
+    --title-bar-bright: #0000aa;
+    --title-bar-text: #ffffff;
+
+    /* Accent + status colors, drawn from the progress-pip ramp in win95.ts. */
+    --accent: #00cccc;   /* cyan */
+    --accent2: #00cc44;  /* pip green  — rgb(0,204,68) */
+    --warn:    #cccc00;  /* pip yellow — rgb(204,204,0) */
+    --danger:  #e02020;  /* alarm red */
+
+    --font: 'VT323', 'Courier New', monospace;
+
+    /* Content column width — clamps slides + nav so nothing stretches across
+       an ultrawide viewport. Tune here; everything else resolves through it. */
+    --content-max: 1040px;
+
+    /* Legacy semantic aliases so existing slide markup still resolves. */
+    --fg: var(--text);
+    --muted: var(--text-muted);
+    --code-bg: var(--surface-alt);
+    --border: var(--border-mid);
+    --kbd-bg: var(--surface);
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 20px/1.45 var(--font);
+  }
+  /* Outer window frame: raised Win95 bevel around the whole deck. */
+  .deck {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    max-width: var(--content-max);
+    margin-inline: auto;
+    padding: 40px 56px 88px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    display: none;
+    animation: fadeIn 0.14s steps(3);
+  }
+  .slide.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: 44px;
+    font-weight: normal;
+    color: var(--accent);
+    letter-spacing: 0;
+    text-shadow: 0 0 8px rgba(0, 204, 204, 0.25);
+  }
+  /* h2 reads as a Win95 title bar: blue gradient strip with a raised bevel. */
+  h2 {
+    margin: 0 0 22px;
+    font-size: 26px;
+    font-weight: normal;
+    color: var(--title-bar-text);
+    background: linear-gradient(90deg, var(--title-bar), var(--title-bar-bright));
+    padding: 4px 12px;
+    letter-spacing: 0.02em;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .subtitle { color: var(--text-muted); margin: 0 0 24px; font-size: 19px; }
+  p { margin: 0 0 14px; max-width: 920px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; max-width: 920px; }
+  li { margin-bottom: 6px; }
+
+  code {
+    font-family: var(--font);
+    font-size: 1em;
+    background: var(--surface-alt);
+    color: var(--accent);
+    padding: 0 5px;
+  }
+  /* Sunken inset panel for code blocks. */
+  pre {
+    background: var(--surface);
+    color: var(--text);
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: var(--font);
+    font-size: 18px;
+    line-height: 1.4;
+    margin: 0 0 16px;
+    max-width: 920px;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  .row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .col { flex: 1 1 380px; min-width: 0; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1200px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Raised bevel chips. */
+  .pill {
+    display: inline-block;
+    padding: 1px 9px;
+    font-size: 17px;
+    background: var(--surface);
+    color: var(--text-muted);
+    margin-right: 6px;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .pill.good   { color: var(--accent2); }
+  .pill.warn   { color: var(--warn); }
+  .pill.danger { color: var(--danger); }
+  .pill.info   { color: var(--accent); }
+
+  /* Sunken panel with a colored accent bar on the left edge. */
+  .callout {
+    background: var(--surface);
+    padding: 12px 16px;
+    margin: 0 0 14px;
+    max-width: 920px;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+    border-left: 4px solid var(--accent);
+  }
+  .callout.warn   { border-left-color: var(--warn); }
+  .callout.danger { border-left-color: var(--danger); }
+  .callout.good   { border-left-color: var(--accent2); }
+  .callout .label {
+    text-transform: uppercase;
+    font-size: 16px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  /* Bottom toolbar: full-width raised strip, controls clamped to the column. */
+  .nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 52px;
+    background: var(--surface);
+    border-top: 2px solid var(--border-light);
+    display: flex;
+    justify-content: center;
+    z-index: 10;
+  }
+  .nav-inner {
+    width: 100%;
+    max-width: var(--content-max);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+  .nav button {
+    background: var(--surface-alt);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 20px;
+    padding: 4px 16px;
+    cursor: pointer;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .nav button:hover { color: var(--accent); }
+  /* Press depresses the bevel (raised -> sunken). */
+  .nav button:active {
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+  }
+  .nav button[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .counter { color: var(--accent); font-size: 18px; font-variant-numeric: tabular-nums; }
+  /* Segmented cyan progress strip, like a Win95 progress bar's blocks. */
+  .progress {
+    position: fixed; top: 0; left: 0; height: 6px;
+    background: var(--accent);
+    background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.55) 0 2px, transparent 2px 10px);
+    box-shadow: 0 0 0 1px var(--border-dark);
+    transition: width 0.12s steps(8);
+    z-index: 11;
+  }
+
+  kbd {
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 17px;
+    padding: 0 6px;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .meta { font-size: 18px; color: var(--text-muted); }
+  .meta a { color: var(--accent); text-decoration: none; }
+  .meta a:hover { text-decoration: underline; }
+  .filepath {
+    font-family: var(--font);
+    font-size: 17px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: block;
+  }
+  .toc { columns: 2; column-gap: 36px; max-width: 920px; }
+  .toc li { break-inside: avoid; }
+  .verdict-table { border-collapse: collapse; margin-top: 8px; max-width: 920px; }
+  .verdict-table td, .verdict-table th {
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--border-dark);
+    text-align: left;
+    vertical-align: top;
+  }
+  .verdict-table th { color: var(--accent); font-weight: normal; font-size: 16px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .added   { color: var(--accent2); }
+  .removed { color: var(--danger); }
+  .ctx     { color: var(--text-muted); }
+  pre .added   { background: rgba(0, 204, 68, 0.12); display: inline-block; width: 100%; }
+  pre .removed { background: rgba(224, 32, 32, 0.14); display: inline-block; width: 100%; }
+
+  /* Syntax highlighting — hljs token classes mapped to the Win95 palette so a
+     palette swap propagates. If the CDN script below is blocked, these rules
+     simply don't match anything and code renders unstyled. */
+  .hljs-comment, .hljs-quote { color: var(--text-muted); font-style: italic; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: var(--accent); }
+  .hljs-built_in, .hljs-type, .hljs-class .hljs-title, .hljs-title.class_ { color: var(--warn); }
+  .hljs-string, .hljs-attr, .hljs-symbol, .hljs-bullet, .hljs-addition { color: var(--accent2); }
+  .hljs-number, .hljs-meta, .hljs-template-variable, .hljs-variable { color: var(--warn); }
+  .hljs-title, .hljs-name, .hljs-function .hljs-title, .hljs-title.function_ { color: var(--accent); }
+  .hljs-params { color: var(--text); }
+  .hljs-regexp, .hljs-deletion { color: var(--danger); }
+  .hljs-tag, .hljs-tag .hljs-name { color: var(--accent); }
+  .hljs-tag .hljs-attr { color: var(--accent2); }
+  .hljs-emphasis { font-style: italic; }
+  .hljs-strong { font-weight: 700; }
+
+  /* --- Grilling input layer (grilling-only; absent from the PR-review deck) --- */
+
+  /* A pruned slide keeps its #anchor but reads as obsolete and goes inert. */
+  .slide.pruned { opacity: 0.4; filter: grayscale(0.75); }
+  .slide.pruned .options,
+  .slide.pruned textarea { pointer-events: none; }
+
+  .options { display: flex; flex-direction: column; gap: 8px; margin: 0 0 18px; max-width: 920px; }
+  /* Radio card: raised Win95 bevel, sinks when its radio is checked. */
+  .option {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--surface);
+    color: var(--text);
+    padding: 10px 14px;
+    cursor: pointer;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-light);
+    border-left-color: var(--border-light);
+    border-bottom-color: var(--border-dark);
+    border-right-color: var(--border-dark);
+  }
+  .option:has(input:checked) {
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+    color: var(--accent);
+  }
+  .option input { accent-color: var(--accent); margin-top: 3px; }
+
+  .field-label {
+    display: block;
+    text-transform: uppercase;
+    font-size: 16px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 12px 0 4px;
+  }
+  textarea.reasoning,
+  textarea.notes {
+    width: 100%;
+    max-width: 920px;
+    box-sizing: border-box;
+    min-height: 60px;
+    background: var(--surface);
+    color: var(--text);
+    font: 18px/1.4 var(--font);
+    padding: 8px 12px;
+    resize: vertical;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+  }
+  textarea.reasoning:focus,
+  textarea.notes:focus { outline: 1px solid var(--accent); }
+
+  /* CRT scanline overlay — ported verbatim from crtOverlay in win95.ts
+     (fixed rather than absolute so it spans the whole viewport). */
+  .crt {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.07) 0px, rgba(0,0,0,0.07) 1px, transparent 1px, transparent 4px);
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- ====================== TITLE SLIDE ====================== -->
+  <section class="slide active" id="title">
+    <h1>Grilling — <TOPIC></h1>
+    <p class="subtitle">Answer in the deck · use <kbd>→</kbd> / <kbd>←</kbd> or <kbd>Space</kbd> to navigate</p>
+
+    <p class="meta">
+      <strong>Selections and notes save as you go and stream to the agent.</strong>
+      Guarded questions dim automatically as your answers make them moot.
+    </p>
+
+    <h2 style="margin-top:32px">What we're deciding</h2>
+    <ol class="toc">
+      <li>Context</li>
+      <li>D1 — first decision</li>
+      <li>D2 — a decision that gates later questions</li>
+    </ol>
+  </section>
+
+  <!-- ====================== INFORMATIONAL SLIDE (notes only) ====================== -->
+  <section class="slide" id="info-1">
+    <h2>Context</h2>
+    <p>One paragraph of background the user needs before the next cluster of decisions. Info slides carry no question — just a notes box.</p>
+
+    <div class="callout">
+      <div class="label">context</div>
+      Concise framing of what the following decisions hinge on.
+    </div>
+
+    <label class="field-label" for="notes-info-1">Notes</label>
+    <textarea class="notes" id="notes-info-1" data-role="notes" placeholder="Anything you want to jot here."></textarea>
+  </section>
+
+  <!-- ====================== DECISION SLIDE (unguarded) ====================== -->
+  <section class="slide decision" id="d1" data-decision="D1">
+    <h2>D1 — &lt;the first question&gt;</h2>
+
+    <div class="callout good">
+      <div class="label">recommendation</div>
+      A — one sentence on why this is the right call.
+    </div>
+
+    <div class="options" role="radiogroup" aria-label="D1 options">
+      <label class="option"><input type="radio" name="D1" value="A" checked><span>A — first option</span></label>
+      <label class="option"><input type="radio" name="D1" value="B"><span>B — second option</span></label>
+    </div>
+
+    <label class="field-label" for="reasoning-d1">Reasoning</label>
+    <textarea class="reasoning" id="reasoning-d1" data-role="reasoning" placeholder="Why you chose what you chose."></textarea>
+    <label class="field-label" for="notes-d1">Notes</label>
+    <textarea class="notes" id="notes-d1" data-role="notes"></textarea>
+  </section>
+
+  <!-- ====================== DECISION SLIDE (guarded by D1) ====================== -->
+  <section class="slide decision" id="d2" data-decision="D2" data-active-if="D1=A">
+    <h2>D2 — &lt;only relevant if D1 = A&gt;</h2>
+
+    <div class="callout good">
+      <div class="label">recommendation</div>
+      yes — one sentence on why.
+    </div>
+
+    <div class="options" role="radiogroup" aria-label="D2 options">
+      <label class="option"><input type="radio" name="D2" value="yes" checked><span>yes</span></label>
+      <label class="option"><input type="radio" name="D2" value="no"><span>no</span></label>
+    </div>
+
+    <label class="field-label" for="reasoning-d2">Reasoning</label>
+    <textarea class="reasoning" id="reasoning-d2" data-role="reasoning"></textarea>
+    <label class="field-label" for="notes-d2">Notes</label>
+    <textarea class="notes" id="notes-d2" data-role="notes"></textarea>
+  </section>
+
+</div>
+
+<div class="nav">
+  <div class="nav-inner">
+    <button id="prev" aria-label="Previous slide">← Prev</button>
+    <span class="counter" id="counter">1 / 1</span>
+    <button id="next" aria-label="Next slide">Next →</button>
+  </div>
+</div>
+
+<!-- CRT scanline overlay sits above the deck; pointer-events:none lets clicks through. -->
+<div class="crt" aria-hidden="true"></div>
+
+<script>
+  // Routing is keyed on each slide's stable `id`, not its DOM index. The
+  // current position is derived fresh from DOM order on every navigation, so
+  // inserting / reordering / dimming a slide never invalidates another
+  // slide's #anchor. We track the *active id*, not an index.
+  const counter = document.getElementById('counter');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const progress = document.getElementById('progress');
+
+  // Live DOM order, recomputed each call so the deck can be edited in place.
+  const slides = () => Array.from(document.querySelectorAll('.slide'));
+  // Ensure every slide has an id; synthesize a stable fallback if one is
+  // missing so routing never breaks on a hand-edited deck.
+  slides().forEach((s, j) => { if (!s.id) s.id = `slide-${j + 1}`; });
+
+  let activeId = null;
+
+  function indexOfId(id) {
+    const all = slides();
+    const idx = all.findIndex(s => s.id === id);
+    return idx === -1 ? 0 : idx;
+  }
+
+  // Navigate to a slide by its stable id.
+  function goToId(id) {
+    const all = slides();
+    let idx = all.findIndex(s => s.id === id);
+    if (idx === -1) idx = 0;
+    activeId = all[idx].id;
+    all.forEach(s => s.classList.toggle('active', s.id === activeId));
+    counter.textContent = `${idx + 1} / ${all.length}`;
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === all.length - 1;
+    progress.style.width = `${((idx + 1) / all.length) * 100}%`;
+    if (location.hash !== `#${activeId}`) {
+      history.replaceState(null, '', `#${activeId}`);
+    }
+    all[idx].scrollTop = 0;
+  }
+
+  // Navigate by position relative to the current slide's live DOM index.
+  function goByOffset(delta) {
+    const all = slides();
+    const idx = Math.max(0, Math.min(all.length - 1, indexOfId(activeId) + delta));
+    goToId(all[idx].id);
+  }
+
+  // Navigate to the Nth slide in current DOM order (1-based). Used by the
+  // number keys and Home/End — a positional convenience, distinct from the
+  // id-stable #anchors.
+  function goToPosition(n) {
+    const all = slides();
+    const idx = Math.max(0, Math.min(all.length - 1, n - 1));
+    goToId(all[idx].id);
+  }
+
+  prevBtn.addEventListener('click', () => goByOffset(-1));
+  nextBtn.addEventListener('click', () => goByOffset(1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+      e.preventDefault();
+      goByOffset(1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      e.preventDefault();
+      goByOffset(-1);
+    } else if (e.key === 'Home') {
+      goToPosition(1);
+    } else if (e.key === 'End') {
+      goToPosition(slides().length);
+    } else if (/^[0-9]$/.test(e.key)) {
+      goToPosition(parseInt(e.key, 10));
+    }
+  });
+
+  // Respond to manual hash edits / back-forward navigation.
+  window.addEventListener('hashchange', () => {
+    const id = (location.hash || '').slice(1);
+    if (id && id !== activeId) goToId(id);
+  });
+
+  // Initial slide: resolve the hash as a stable id (#d3 -> id="d3"). Fall
+  // back to the first slide if the hash is empty or names a missing id.
+  const startId = (location.hash || '').slice(1);
+  goToId(startId || slides()[0].id);
+</script>
+
+<!--
+  Grilling input layer. Reads selections + free text, autosaves locally, streams
+  answers to the localhost bridge (if one is serving), evaluates branch guards
+  client-side, and applies agent SSE injections with no reload. Kept separate
+  from the routing script above, which stays verbatim so appended branch slides
+  route for free.
+-->
+<script>
+  const meta = name => {
+    const el = document.querySelector(`meta[name="${name}"]`);
+    return el ? el.content : '';
+  };
+  const GRILL_TOKEN = meta('grill-token');   // Empty when opened as a plain file.
+  const GRILL_TOPIC = meta('grill-topic');
+  const AUTOSAVE_PREFIX = `grill:${GRILL_TOPIC || 'deck'}:`;
+
+  const decisionSlides = () => Array.from(document.querySelectorAll('.slide[data-decision]'));
+
+  // Current answers as {D1:"A", ...} — read live from the checked radios.
+  function currentSelections() {
+    const sel = {};
+    decisionSlides().forEach(slide => {
+      const checked = slide.querySelector('input[type="radio"]:checked');
+      if (checked) sel[slide.dataset.decision] = checked.value;
+    });
+    return sel;
+  }
+
+  // "D2=A,B;D5=yes" — ; ANDs conditions, , ORs values within one decision.
+  // Membership only. Fails OPEN: unparseable, or naming an unanswered decision.
+  function guardSatisfied(expr, selections) {
+    if (!expr) return true;
+    return expr.split(';').every(cond => {
+      const eq = cond.indexOf('=');
+      if (eq === -1) return true;
+      const decision = cond.slice(0, eq).trim();
+      const chosen = selections[decision];
+      if (chosen === undefined) return true;
+      const allowed = cond.slice(eq + 1).split(',').map(v => v.trim());
+      return allowed.includes(chosen);
+    });
+  }
+
+  function evaluateGuards() {
+    const selections = currentSelections();
+    document.querySelectorAll('.slide[data-active-if]').forEach(slide => {
+      slide.classList.toggle('pruned', !guardSatisfied(slide.dataset.activeIf, selections));
+    });
+  }
+
+  function slidePayload(slide) {
+    const checked = slide.querySelector('input[type="radio"]:checked');
+    const reasoning = slide.querySelector('[data-role="reasoning"]');
+    const notes = slide.querySelector('[data-role="notes"]');
+    return {
+      topic: GRILL_TOPIC,
+      decision: slide.dataset.decision || slide.id,
+      choice: checked ? checked.value : null,
+      reasoning: reasoning ? reasoning.value : '',
+      notes: notes ? notes.value : '',
+      ts: Date.now(),
+    };
+  }
+
+  // Fire-and-forget; the bridge is optional, so a failed/absent POST is a no-op.
+  function postAnswer(payload) {
+    if (!GRILL_TOKEN) return;
+    fetch(`/answers?token=${encodeURIComponent(GRILL_TOKEN)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {});
+  }
+
+  function saveSlide(slide) {
+    const payload = slidePayload(slide);
+    localStorage.setItem(AUTOSAVE_PREFIX + slide.id, JSON.stringify(payload));
+  }
+
+  function restoreSlide(slide) {
+    const raw = localStorage.getItem(AUTOSAVE_PREFIX + slide.id);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.choice != null) {
+      const radio = slide.querySelector(`input[type="radio"][value="${CSS.escape(saved.choice)}"]`);
+      if (radio) radio.checked = true;
+    }
+    const reasoning = slide.querySelector('[data-role="reasoning"]');
+    if (reasoning && typeof saved.reasoning === 'string') reasoning.value = saved.reasoning;
+    const notes = slide.querySelector('[data-role="notes"]');
+    if (notes && typeof saved.notes === 'string') notes.value = saved.notes;
+  }
+
+  // Agent -> deck. Branch HTML is agent-authored (trusted, over the token'd
+  // channel) so append uses innerHTML; user-typed echoes go via .value only.
+  function appendSlide(id, html) {
+    if (!id || document.getElementById(id)) return;   // Append-only; never reuse an id.
+    const tpl = document.createElement('template');
+    tpl.innerHTML = String(html).trim();
+    const section = tpl.content.firstElementChild;
+    if (section) document.getElementById('deck').appendChild(section);
+  }
+
+  function echoRecorded(op) {
+    const slide = (op.id && document.getElementById(op.id))
+      || document.querySelector(`.slide[data-decision="${CSS.escape(op.decision || '')}"]`);
+    if (!slide) return;
+    if (op.choice != null) {
+      const radio = slide.querySelector(`input[type="radio"][value="${CSS.escape(op.choice)}"]`);
+      if (radio) radio.checked = true;
+    }
+    if (typeof op.reasoning === 'string') {
+      const r = slide.querySelector('[data-role="reasoning"]');
+      if (r) r.value = op.reasoning;
+    }
+    if (typeof op.notes === 'string') {
+      const n = slide.querySelector('[data-role="notes"]');
+      if (n) n.value = op.notes;
+    }
+    saveSlide(slide);
+  }
+
+  function applyInjection(op) {
+    if (op.op === 'append') appendSlide(op.id, op.html);
+    else if (op.op === 'recorded') echoRecorded(op);
+    evaluateGuards();
+  }
+
+  function subscribeInjections() {
+    if (!GRILL_TOKEN) return;
+    const es = new EventSource(`/events?token=${encodeURIComponent(GRILL_TOKEN)}`);
+    es.onmessage = ev => {
+      let op;
+      try { op = JSON.parse(ev.data); } catch { return; }
+      applyInjection(op);
+    };
+  }
+
+  let postTimer = null;
+  const deck = document.getElementById('deck');
+
+  // Radio pick / textarea blur: record immediately and re-evaluate branches.
+  deck.addEventListener('change', e => {
+    const slide = e.target.closest('.slide');
+    if (!slide) return;
+    saveSlide(slide);
+    postAnswer(slidePayload(slide));
+    evaluateGuards();
+  });
+
+  // Typing: save every keystroke, debounce the network post.
+  deck.addEventListener('input', e => {
+    const slide = e.target.closest('.slide');
+    if (!slide) return;
+    saveSlide(slide);
+    clearTimeout(postTimer);
+    postTimer = setTimeout(() => postAnswer(slidePayload(slide)), 400);
+  });
+
+  document.querySelectorAll('.slide').forEach(restoreSlide);
+  evaluateGuards();
+  subscribeInjections();
+</script>
+
+<!--
+  Syntax highlighter. Loaded from cdnjs (one external dep — the only
+  exception to the otherwise self-contained rule, justified because
+  shipping a full lexer inline would dwarf the rest of the file).
+  Token colors are defined locally in the <style> block above so they
+  inherit the active palette. If the CDN is blocked, code
+  blocks render unstyled — readable, just monochrome.
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js" defer></script>
+<script defer>
+  window.addEventListener('load', () => {
+    if (window.hljs) {
+      document.querySelectorAll('pre code').forEach(block => {
+        // Skip blocks we styled manually with .added / .removed spans
+        // (diff-style hand-rolled highlighting — leave them alone).
+        if (block.querySelector('.added, .removed')) return;
+        window.hljs.highlightElement(block);
+      });
+    }
+  });
+</script>
+</body>
+</html>
