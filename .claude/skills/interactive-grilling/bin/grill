@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# grill — drive the ephemeral localhost bridge for an interactive-grilling deck.
+# Bash dispatcher over grill_server.py, modeled on rudolph/bin/rudolph-cursor-e2e.
+#
+# The agent authors the deck at /tmp/grill-<topic>-deck.html first, then:
+#
+#   grill start  <topic> [deck] [buffer]  Spawn the server, open the deck once.
+#   grill poll   <topic> [wait-seconds]   Long-poll answers, append to inbox.jsonl, exit.
+#   grill inject <topic> <json>           Push an SSE frame to the deck (recorded/append op).
+#   grill stop   <topic>                  Kill the server, remove the session file.
+#   grill status <topic>                  Report whether the session is live or stale.
+#
+# One server per topic on a random loopback port + per-session token. State lives
+# in /tmp/grill-<topic>-session.json (chmod 600). Answers cross as DATA only.
+
+set -euo pipefail
+
+SERVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/../server" && pwd)/grill_server.py"
+
+fail() { printf "grill: %s\n" "$*" >&2; exit 1; }
+
+command -v jq     >/dev/null 2>&1 || fail "jq is required (brew install jq)."
+command -v curl   >/dev/null 2>&1 || fail "curl is required."
+command -v python3 >/dev/null 2>&1 || fail "python3 is required."
+
+session_path() { echo "/tmp/grill-$1-session.json"; }
+
+# Health-probe a port and confirm it is *this* topic's server (guards against an
+# OS-recycled port now owned by a different process — treat that as stale).
+probe_health() {
+  local port="$1" want="$2" got
+  got=$(curl -sf "http://127.0.0.1:$port/health" 2>/dev/null | jq -r '.topic // empty' 2>/dev/null) || return 1
+  [ "$got" = "$want" ]
+}
+
+sf_field() { jq -r ".$2 // empty" "$(session_path "$1")"; }
+
+# Kill a pid if it is set and still alive; never abort under set -e.
+kill_if_alive() { [ -n "$1" ] && kill -0 "$1" 2>/dev/null && kill "$1" 2>/dev/null || true; }
+
+topic="${2:-}"
+
+case "${1:-}" in
+  start)
+    [ -n "$topic" ] || fail "usage: grill start <topic> [deck] [buffer]"
+    deck="${3:-/tmp/grill-$topic-deck.html}"
+    buffer="${4:-/tmp/grill-$topic-decisions.md}"
+    [ -f "$deck" ] || fail "deck not found: $deck (author the deck before starting the bridge)."
+    sf="$(session_path "$topic")"
+
+    if [ -f "$sf" ]; then
+      port="$(sf_field "$topic" port)"
+      pid="$(sf_field "$topic" pid)"
+      if probe_health "$port" "$topic"; then
+        echo "grill: reusing live session for '$topic' on http://127.0.0.1:$port/"
+        exit 0
+      fi
+      # Session file present but the server is gone or on a recycled port. Clean
+      # up any stray process and respawn.
+      kill_if_alive "$pid"
+      rm -f "$sf"
+    fi
+
+    token="$(openssl rand -hex 24)"
+    log="/tmp/grill-$topic-server.log"
+    ready=""
+    for _ in 1 2 3; do
+      port=$(( (RANDOM % 16384) + 49152 ))
+      nohup python3 "$SERVER" \
+        --topic "$topic" --token "$token" --port "$port" \
+        --deck "$deck" --buffer "$buffer" \
+        --session-file "$sf" --idle-timeout 1800 \
+        >"$log" 2>&1 &
+      pid=$!
+      for _ in $(seq 1 25); do
+        if probe_health "$port" "$topic"; then ready=1; break; fi
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.2
+      done
+      [ -n "$ready" ] && break
+      kill "$pid" 2>/dev/null || true
+    done
+    [ -n "$ready" ] || fail "server failed to come up — see $log"
+
+    ( umask 077
+      jq -n \
+        --arg topic "$topic" --argjson port "$port" --arg token "$token" \
+        --argjson pid "$pid" --arg deck "$deck" --arg buffer "$buffer" \
+        --arg started "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        '{topic:$topic, port:$port, token:$token, pid:$pid, deck_path:$deck,
+          buffer_path:$buffer, idle_timeout_s:1800, started_at:$started}' > "$sf" )
+
+    open "http://127.0.0.1:$port/" 2>/dev/null || true
+    echo "grill: '$topic' live on http://127.0.0.1:$port/ (pid $pid)"
+    ;;
+
+  poll)
+    [ -n "$topic" ] || fail "usage: grill poll <topic> [wait-seconds]"
+    sf="$(session_path "$topic")"
+    [ -f "$sf" ] || fail "no session for '$topic' — run: grill start $topic"
+    port="$(sf_field "$topic" port)"
+    token="$(sf_field "$topic" token)"
+    wait="${3:-25}"
+    inbox="/tmp/grill-$topic-inbox.jsonl"
+
+    resp="$(curl -sf "http://127.0.0.1:$port/poll?token=$token&wait=$wait")" || fail "poll failed (server down?)"
+    n="$(echo "$resp" | jq 'length')"
+    if [ "$n" -gt 0 ]; then
+      echo "$resp" | jq -c '.[]' >> "$inbox"
+      echo "$resp" | jq -c '.[]'
+    fi
+    echo "grill: polled $n answer(s) for '$topic' -> $inbox" >&2
+    ;;
+
+  inject)
+    [ -n "$topic" ] || fail "usage: grill inject <topic> <json>"
+    body="${3:-}"
+    [ -n "$body" ] || fail "usage: grill inject <topic> <json>"
+    sf="$(session_path "$topic")"
+    [ -f "$sf" ] || fail "no session for '$topic' — run: grill start $topic"
+    port="$(sf_field "$topic" port)"
+    token="$(sf_field "$topic" token)"
+    curl -sf -X POST "http://127.0.0.1:$port/inject?token=$token" \
+      -H 'Content-Type: application/json' -d "$body" | jq . || fail "inject failed"
+    ;;
+
+  stop)
+    [ -n "$topic" ] || fail "usage: grill stop <topic>"
+    sf="$(session_path "$topic")"
+    if [ ! -f "$sf" ]; then echo "grill: no session for '$topic'"; exit 0; fi
+    kill_if_alive "$(sf_field "$topic" pid)"
+    rm -f "$sf"
+    echo "grill: stopped '$topic'"
+    ;;
+
+  status)
+    [ -n "$topic" ] || fail "usage: grill status <topic>"
+    sf="$(session_path "$topic")"
+    if [ ! -f "$sf" ]; then echo "grill: no session for '$topic'"; exit 0; fi
+    port="$(sf_field "$topic" port)"
+    if probe_health "$port" "$topic"; then
+      echo "grill: '$topic' live on http://127.0.0.1:$port/"
+    else
+      echo "grill: '$topic' session file present but server not responding (stale)"
+    fi
+    ;;
+
+  *)
+    fail "usage: grill {start|poll|inject|stop|status} <topic> [...]"
+    ;;
+esac

@@ -4,3 +4,5 @@
 !settings.json
 !skills/
 !skills/**
+skills/**/__pycache__/
+skills/**/*.pyc

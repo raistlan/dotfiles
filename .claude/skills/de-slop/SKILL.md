@@ -25,7 +25,8 @@ already moved past.
    checker and don't follow the codebase's patterns. Fix the type at its source, narrow at the
    use site, or validate at the boundary instead.
 4. **Single-use indirection** — see the abstraction audit.
-5. **Any other style inconsistent with the surrounding file.**
+5. **Dangling references to removed things** — when you delete code, delete what points at it; don't convert references into negations ("no longer uses X", "don't do the old Y"). A note about a state no future reader can see is just noise.
+6. **Any other style inconsistent with the surrounding file.**
 
 ## Abstraction audit (enumerate single-use indirections)
 
