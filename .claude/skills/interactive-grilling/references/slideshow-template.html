@@ -328,6 +328,12 @@
     justify-content: space-between;
     padding: 0 16px;
   }
+  /* Next comes first in the DOM so Tab out of a notes textarea lands on the
+     primary action, not Prev. `order` restores the visual layout (Prev left,
+     Next right) so focus order and reading order diverge only by intent. */
+  #prev { order: 1; }
+  #counter { order: 2; }
+  #next { order: 3; }
   .nav button {
     background: var(--surface-alt);
     color: var(--text);
@@ -462,7 +468,7 @@
     width: 100%;
     max-width: 920px;
     box-sizing: border-box;
-    min-height: 60px;
+    min-height: 120px;
     background: var(--surface);
     color: var(--text);
     font: 18px/1.4 var(--font);
@@ -564,9 +570,9 @@
 
 <div class="nav">
   <div class="nav-inner">
-    <button id="prev" aria-label="Previous slide">← Prev</button>
-    <span class="counter" id="counter">1 / 1</span>
     <button id="next" aria-label="Next slide">Next →</button>
+    <span class="counter" id="counter">1 / 1</span>
+    <button id="prev" aria-label="Previous slide">← Prev</button>
   </div>
 </div>
 
