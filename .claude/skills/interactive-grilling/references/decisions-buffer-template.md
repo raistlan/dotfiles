@@ -3,10 +3,12 @@
 Deck: /tmp/grill-<topic>-deck.html · Bridge session: /tmp/grill-<topic>-session.json
 
 Single source of truth for the session. The deck and chat are two input paths that both feed
-this file; **you are its sole writer**. On conflicting answers for one decision, **last-write-
-wins by `ts`**, and you **echo the value you recorded** back to the deck
-(`grill inject <topic> '{"op":"recorded",…}'`) so the widgets match the buffer. Full protocol
-lives in the interactive-grilling SKILL — this is just the shape.
+this file; **you are its sole writer**. A slide's answer arrives when the user *leaves* the
+slide (drafts don't stream). On conflicting answers for one decision, **last-write-wins by
+`ts`**. You may surface your tracking note in that slide's agent decision-log
+(`grill inject <topic> '{"op":"log","id":"dN","text":"…"}'`) — but **never** write back into the
+user's radio or notes field. Full protocol lives in the interactive-grilling SKILL — this is
+just the shape.
 
 Fields: **id** (`D1`..`Dn`, ask-order, never reused or renumbered) · **question** · **status**
 (`open` | `answered` | `pruned` | `reopened`) · **answer** · **notes** (user's, verbatim — the

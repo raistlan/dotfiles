@@ -6,7 +6,7 @@
 #
 #   grill start  <topic> [deck] [buffer]  Spawn the server, open the deck once.
 #   grill poll   <topic> [wait-seconds]   Long-poll answers, append to inbox.jsonl, exit.
-#   grill inject <topic> <json>           Push an SSE frame to the deck (recorded/append op).
+#   grill inject <topic> <json>           Push an SSE frame to the deck (log/append op).
 #   grill stop   <topic>                  Kill the server, remove the session file.
 #   grill status <topic>                  Report whether the session is live or stale.
 #

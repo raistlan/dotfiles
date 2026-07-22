@@ -5,6 +5,7 @@ alias ga="git add ."
 alias gco="git checkout"
 alias gcm="git commit -m"
 alias gpoh="git push -u origin HEAD"
+alias rmg="rm /Users/raistlan/development/acme/.git/index.lock"
 
 # --- Workflow ---
 alias pnrd="git pull && npm run dev"
@@ -94,3 +95,30 @@ journal() {
   git -C "$journal_dir" push
 }
 
+# Remove the worktree that's holding a branch, so you can check the branch out.
+# Usage: wtd <branch> [--force]
+wtd() {
+  local branch="$1"
+  [ -z "$branch" ] && { echo "usage: wtd <branch> [--force]" >&2; return 1; }
+
+  local list
+  list=$(/usr/bin/git worktree list --porcelain)
+
+  local path main
+  path=$(printf '%s\n' "$list" | /usr/bin/awk -v b="refs/heads/$branch" '
+    /^worktree / { wt = substr($0, 10) }
+    $0 == "branch " b { print wt; exit }
+  ')
+  # The first porcelain entry is always the main working tree.
+  main=$(printf '%s\n' "$list" | /usr/bin/awk '/^worktree / { print substr($0, 10); exit }')
+
+  [ -z "$path" ] && { echo "wtd: no worktree holds '$branch'" >&2; return 1; }
+
+  if [ "$path" = "$main" ]; then
+    echo "wtd: '$branch' is checked out" >&2
+    return 1
+  fi
+
+  echo "Removing worktree: $path"
+  /usr/bin/git worktree remove "$path" "${@:2}"
+}

@@ -16,9 +16,13 @@
   ---------------------------
   A decision slide carries `data-decision="D3"`, a radio group (recommendation
   pre-checked), and a single notes textarea (the "why" plus any notes). An info
-  slide carries a notes textarea only. On every change the deck: autosaves to localStorage
-  (keyed by the stable slide id), fires a fire-and-forget POST /answers, and
-  re-runs evaluateGuards(). Nothing blocks; the bridge is optional.
+  slide carries a notes textarea only. A slide is an editable DRAFT while it is
+  the active slide: on every change the deck autosaves to localStorage (keyed by
+  the stable slide id) and re-runs evaluateGuards(), but it does NOT stream to
+  the agent. The answer commits — a single fire-and-forget POST /answers — only
+  when you LEAVE the slide (Next/Prev/jump), and only if you actually touched it.
+  So you can revise or reverse a pick freely; the agent never sees the interim
+  state. Nothing blocks; the bridge is optional.
 
   GUARD SYNTAX (client-side branching, zero network)
   --------------------------------------------------
@@ -32,11 +36,12 @@
   ANSWER + INJECTION CONTRACT (answers cross as DATA, never instructions)
   -----------------------------------------------------------------------
   POST /answers body: {topic, decision:"D3", choice:"B"|null, notes, ts}.
-  The server whitelists exactly those keys and coerces them to strings.
+  The server whitelists exactly those keys and coerces them to strings. `notes`
+  is the USER's field; the agent reads it but never writes back to it.
   Agent -> deck over SSE /events:
-    {op:"recorded", id|decision, choice, notes} echoes the recorded
-      value back into the widgets (user-typed text is written via .value /
-      textContent, never innerHTML).
+    {op:"log", id|decision, text} writes the agent's decision-tracking note into
+      that slide's agent-log panel (via textContent, never innerHTML). It CANNOT
+      touch the user's radio or notes textarea — separate, agent-owned display.
     {op:"append", id, html} injects an agent-authored branch <section>; routing
       picks it up live with no reload. Pruning is client-only, never an inject op.
 
@@ -483,6 +488,34 @@
   }
   textarea.notes:focus { outline: 1px solid var(--accent); }
 
+  /* Agent-owned decision log: DISPLAY ONLY. The agent writes here via an SSE
+     {op:"log"} inject; the user never edits it. Amber left-bar + amber label
+     set it apart from the user's cyan notes textarea and the green
+     recommendation, so the two ownerships never blur into one field. */
+  .agent-log {
+    max-width: 920px;
+    margin-top: 18px;
+    background: var(--surface);
+    padding: 10px 14px;
+    box-sizing: border-box;
+    border-style: solid;
+    border-width: 2px;
+    border-top-color: var(--border-dark);
+    border-left-color: var(--border-dark);
+    border-bottom-color: var(--border-light);
+    border-right-color: var(--border-light);
+    border-left: 4px solid var(--warn);
+  }
+  .agent-log .label {
+    text-transform: uppercase;
+    font-size: 16px;
+    letter-spacing: 0.06em;
+    color: var(--warn);
+    margin-bottom: 4px;
+  }
+  .agent-log-body { white-space: pre-wrap; color: var(--text-muted); min-height: 1.4em; }
+  .agent-log-body:empty::before { content: "—"; color: var(--text-dim); }
+
   /* CRT scanline overlay — ported verbatim from crtOverlay in win95.ts
      (fixed rather than absolute so it spans the whole viewport). */
   .crt {
@@ -504,8 +537,11 @@
     <p class="subtitle">Answer in the deck · use <kbd>→</kbd> / <kbd>←</kbd> or <kbd>Space</kbd> to navigate</p>
 
     <p class="meta">
-      <strong>Selections and notes save as you go and stream to the agent.</strong>
-      Guarded questions dim automatically as your answers make them moot.
+      <strong>Your picks and notes save as you go; they commit to the agent when you
+      move to the next slide</strong> — so revise freely while you're on a slide. Your
+      notes are yours: the agent keeps its own record in the amber decision-log panel
+      and never edits your field. Guarded questions dim automatically as your answers
+      make them moot.
     </p>
 
     <h2 style="margin-top:32px">What we're deciding</h2>
@@ -526,8 +562,8 @@
       Concise framing of what the following decisions hinge on.
     </div>
 
-    <label class="field-label" for="notes-info-1">Notes</label>
-    <textarea class="notes" id="notes-info-1" data-role="notes" placeholder="Notes…"></textarea>
+    <label class="field-label" for="notes-info-1">Your notes</label>
+    <textarea class="notes" id="notes-info-1" data-role="notes" placeholder="Your notes…"></textarea>
   </section>
 
   <!-- ====================== DECISION SLIDE (unguarded) ====================== -->
@@ -544,8 +580,13 @@
       <label class="option"><input type="radio" name="D1" value="B"><span>B — second option</span></label>
     </div>
 
-    <label class="field-label" for="notes-d1">Notes</label>
-    <textarea class="notes" id="notes-d1" data-role="notes" placeholder="Why this choice? Any notes…"></textarea>
+    <label class="field-label" for="notes-d1">Your notes</label>
+    <textarea class="notes" id="notes-d1" data-role="notes" placeholder="Why this choice? Any notes — the agent never edits this…"></textarea>
+
+    <div class="agent-log" data-role="agent-log" id="log-d1">
+      <div class="label">Agent · decision log</div>
+      <div class="agent-log-body" data-role="agent-log-body" aria-live="polite"></div>
+    </div>
   </section>
 
   <!-- ====================== DECISION SLIDE (guarded by D1) ====================== -->
@@ -562,8 +603,13 @@
       <label class="option"><input type="radio" name="D2" value="no"><span>no</span></label>
     </div>
 
-    <label class="field-label" for="notes-d2">Notes</label>
-    <textarea class="notes" id="notes-d2" data-role="notes" placeholder="Why this choice? Any notes…"></textarea>
+    <label class="field-label" for="notes-d2">Your notes</label>
+    <textarea class="notes" id="notes-d2" data-role="notes" placeholder="Why this choice? Any notes — the agent never edits this…"></textarea>
+
+    <div class="agent-log" data-role="agent-log" id="log-d2">
+      <div class="label">Agent · decision log</div>
+      <div class="agent-log-body" data-role="agent-log-body" aria-live="polite"></div>
+    </div>
   </section>
 
 </div>
@@ -697,6 +743,7 @@
   const GRILL_TOKEN = meta('grill-token');   // Empty when opened as a plain file.
   const GRILL_TOPIC = meta('grill-topic');
   const AUTOSAVE_PREFIX = `grill:${GRILL_TOPIC || 'deck'}:`;
+  const AGENT_LOG_PREFIX = `${AUTOSAVE_PREFIX}log:`;   // Agent-owned; kept apart from user inputs.
 
   // Current answers as {D1:"A", ...} — read live from the checked radios.
   function currentSelections() {
@@ -758,10 +805,11 @@
     localStorage.setItem(AUTOSAVE_PREFIX + slide.id, JSON.stringify(payload));
   }
 
-  // The single write path into a slide's widgets, shared by localStorage restore
-  // and agent SSE echoes. User-typed text always lands via .value, never
-  // innerHTML — the XSS boundary that matters when replaying relayed answers.
-  function writeAnswer(slide, { choice, notes }) {
+  // Restore-only write path for the USER's own inputs (radio + notes) from
+  // localStorage. The agent never calls this — it has no path to the user's
+  // notes textarea, which is what stops the clobber. User text lands via .value,
+  // never innerHTML.
+  function writeUserInputs(slide, { choice, notes }) {
     if (choice != null) {
       const radio = slide.querySelector(`input[type="radio"][value="${CSS.escape(choice)}"]`);
       if (radio) radio.checked = true;
@@ -774,11 +822,23 @@
 
   function restoreSlide(slide) {
     const raw = localStorage.getItem(AUTOSAVE_PREFIX + slide.id);
-    if (raw) writeAnswer(slide, JSON.parse(raw));
+    if (raw) writeUserInputs(slide, JSON.parse(raw));
+    const log = localStorage.getItem(AGENT_LOG_PREFIX + slide.id);
+    if (log != null) writeAgentLog(slide, log);
+  }
+
+  // Agent -> deck, display only. The agent's per-decision tracking note lands in
+  // that slide's agent-log panel via textContent (never innerHTML, never the
+  // user's fields). Persisted under its own key so a reload keeps the log.
+  function writeAgentLog(slide, text) {
+    const body = slide.querySelector('[data-role="agent-log-body"]');
+    if (!body) return;
+    body.textContent = String(text);
+    localStorage.setItem(AGENT_LOG_PREFIX + slide.id, String(text));
   }
 
   // Agent -> deck. Branch HTML is agent-authored (trusted, over the token'd
-  // channel) so append uses innerHTML; user-typed echoes go via writeAnswer.
+  // channel) so append uses innerHTML; the log write goes via writeAgentLog.
   function appendSlide(id, html) {
     if (!id || document.getElementById(id)) return;   // Append-only; never reuse an id.
     const tpl = document.createElement('template');
@@ -787,17 +847,15 @@
     if (section) document.getElementById('deck').appendChild(section);
   }
 
-  function echoRecorded(op) {
+  function applyLog(op) {
     const slide = (op.id && document.getElementById(op.id))
       || document.querySelector(`.slide[data-decision="${CSS.escape(op.decision || '')}"]`);
-    if (!slide) return;
-    writeAnswer(slide, op);
-    saveSlide(slide);
+    if (slide) writeAgentLog(slide, op.text != null ? op.text : '');
   }
 
   function applyInjection(op) {
     if (op.op === 'append') appendSlide(op.id, op.html);
-    else if (op.op === 'recorded') echoRecorded(op);
+    else if (op.op === 'log') applyLog(op);
     evaluateGuards();
   }
 
@@ -811,26 +869,54 @@
     };
   }
 
-  let postTimer = null;
   const deck = document.getElementById('deck');
 
-  // Radio pick / textarea blur: record immediately and re-evaluate branches.
+  // Draft-until-leave: a slide is an editable draft while it is active. Picks
+  // and keystrokes autosave to localStorage (survive a reload) and re-evaluate
+  // branch guards locally, but they do NOT stream to the agent — so revising or
+  // reversing a pick before moving on never reaches the agent. `dirtySlides`
+  // tracks which slides the user actually touched; only those commit on leave,
+  // so merely paging past a pre-checked recommendation never fabricates an answer.
+  const dirtySlides = new Set();
+
+  function commitSlide(id) {
+    if (!dirtySlides.has(id)) return;
+    dirtySlides.delete(id);
+    const slide = document.getElementById(id);
+    if (slide) postAnswer(slidePayload(slide));
+  }
+
+  // Radio pick / textarea blur: mark dirty, autosave, re-evaluate branches.
   deck.addEventListener('change', e => {
     const slide = e.target.closest('.slide');
     if (!slide) return;
+    dirtySlides.add(slide.id);
     saveSlide(slide);
-    postAnswer(slidePayload(slide));
     evaluateGuards();
   });
 
-  // Typing: save every keystroke, debounce the network post.
+  // Typing: mark dirty and autosave every keystroke. No network post here.
   deck.addEventListener('input', e => {
     const slide = e.target.closest('.slide');
     if (!slide) return;
+    dirtySlides.add(slide.id);
     saveSlide(slide);
-    clearTimeout(postTimer);
-    postTimer = setTimeout(() => postAnswer(slidePayload(slide)), 400);
   });
+
+  // Commit the slide being left. `goToId` is a global function declaration from
+  // the routing script; reassigning the global rebinds every caller (Next/Prev,
+  // keyboard, number-jump, hashchange) through this wrapper, so leaving a slide
+  // in ANY way flushes its draft first. `activeId` is the routing script's live
+  // top-level binding, readable here by name.
+  const routeToId = goToId;
+  window.goToId = function (id) {
+    if (activeId && id !== activeId) commitSlide(activeId);
+    routeToId(id);
+  };
+
+  // A tab close / external navigation won't route through goToId — flush the
+  // active slide's draft on the way out. postAnswer already uses keepalive.
+  window.addEventListener('pagehide', () => { if (activeId) commitSlide(activeId); });
 
   document.querySelectorAll('.slide').forEach(restoreSlide);
   evaluateGuards();
