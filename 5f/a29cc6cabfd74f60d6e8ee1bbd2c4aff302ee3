@@ -1,0 +1,16 @@
+.config/zed/keymap.json
+  h_22901c53231748 100
+.config/zed/settings.json
+  h_22901c53231748 9-13,24-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "5fa29cc6cabfd74f60d6e8ee1bbd2c4aff302ee3",
+  "prompts": {},
+  "humans": {
+    "h_22901c53231748": {
+      "author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
