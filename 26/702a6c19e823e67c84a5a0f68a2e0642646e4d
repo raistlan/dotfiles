@@ -1,0 +1,21 @@
+.claude/skills/phase-9/SKILL.md
+  s_d4cec8ab41c92d::t_48b8447d950a49 3,7,9,11-13,34,92-102,104,106,130,151
+.claude/skills/quality-pass/SKILL.md
+  s_d4cec8ab41c92d::t_d634e4cb68b372 1-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "26702a6c19e823e67c84a5a0f68a2e0642646e4d",
+  "prompts": {},
+  "sessions": {
+    "s_d4cec8ab41c92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "47d6e1a0-1fe5-4da0-b7be-93a14561fa8a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
