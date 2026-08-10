@@ -1,0 +1,23 @@
+// Zed settings
+//
+// Personal, machine-agnostic preferences only. Anything tied to a specific
+// repo — formatters, linters, language servers — belongs in that repo's
+// own .zed/settings.json so it can't leak into unrelated projects.
+//
+// Docs: https://zed.dev/docs/configuring-zed
+{
+  "terminal": {
+    "font_size": 13.0
+  },
+  "edit_predictions": {
+    "provider": "copilot"
+  },
+  "proxy": "",
+  "ui_font_size": 16.0,
+  "buffer_font_size": 13.0,
+  "theme": {
+    "mode": "system",
+    "light": "One Dark",
+    "dark": "Ayu Dark"
+  }
+}

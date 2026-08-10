@@ -1,0 +1,119 @@
+// Zed keymap
+//
+// For information on binding keys, see the Zed
+// documentation: https://zed.dev/docs/key-bindings
+//
+// To see the default key bindings run `zed: open default keymap`
+// from the command palette.
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      // "shift shift": "file_finder::Toggle"
+    },
+  },
+  {
+    "context": "Editor && vim_mode == insert",
+    "bindings": {
+      // "j k": "vim::NormalBefore"
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-b": "workspace::ToggleRightDock"
+    }
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "alt-cmd-b": "workspace::ToggleRightDock"
+    }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-shift-b": "workspace::ToggleLeftDock"
+    }
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "cmd-b": "workspace::ToggleLeftDock"
+    }
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "cmd-r": "workspace::ToggleRightDock"
+    }
+  },
+  {
+    "bindings": {
+      "cmd-k shift-l": "editor::CopyPermalinkToLine"
+    }
+  },
+  {
+    "context": "Editor",
+    "unbind": {
+      "cmd-k p": "workspace::CopyPath"
+    }
+  },
+  {
+    "context": "Pane",
+    "bindings": {
+      "cmd-k p": "pane::TogglePinTab"
+    }
+  },
+  {
+    "context": "Pane",
+    "unbind": {
+      "cmd-k shift-enter": "pane::TogglePinTab"
+    }
+  },
+  {
+    "context": "Pane",
+    "bindings": {
+      "ctrl-,": "pane::GoBack"
+    }
+  },
+  {
+    "context": "Pane",
+    "unbind": {
+      "ctrl--": "pane::GoBack"
+    }
+  },
+  {
+    "context": "Pane",
+    "bindings": {
+      "ctrl-.": "pane::GoForward"
+    }
+  },
+  {
+    "context": "Pane",
+    "unbind": {
+      "ctrl-_": "pane::GoForward"
+    }
+  },
+  {
+    "bindings": {
+      "cmd-k l": "editor::CopyRelativePath"
+    }
+  },
+  {
+    "bindings": {
+      "cmd-k b": "editor::ToggleBookmarkWithLabel"
+    }
+  },
+  {
+    "context": "Editor",
+    "unbind": {
+      "cmd-shift-k": "editor::DeleteLine"
+    }
+  },
+  {
+    "bindings": {
+      "cmd-k cmd-b": "editor::ViewBookmarks"
+    }
+  }
+]

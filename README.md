@@ -21,6 +21,21 @@
    - `ln -s ~/development/dotfiles/.claude/settings.json ~/.claude/settings.json`
    - `ln -s ~/development/dotfiles/.claude/skills/napkin ~/.claude/skills/napkin`
 
+#### Zed
+
+1. [Optional] Back up what's there already: `cp ~/.config/zed/settings.json ~/.config/zed/keymap.json /some/backup/dir/`
+2. Create the symlinks:
+   - `ln -s -f ~/development/dotfiles/.config/zed/settings.json ~/.config/zed/settings.json`
+   - `ln -s -f ~/development/dotfiles/.config/zed/keymap.json ~/.config/zed/keymap.json`
+
+Link the two files individually rather than the whole `~/.config/zed/` directory —
+Zed also writes caches, logs, and a `prompts/` LMDB database of AI prompt history
+into that directory, none of which should be in a public repo.
+
+Repo-specific Zed config (formatters, linters, language servers) does not belong
+here. It goes in that repo's own `.zed/settings.json`, which Zed layers on top of
+these settings.
+
 
 ### Alternatively, per "the hacker news way"
 
