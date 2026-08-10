@@ -2,6 +2,29 @@
 
 Primary local tasks: **building new features** and **reviewing PRs and branches**. Locally I prefer a minimal set of MCPs; reserve MCP-heavy workflows for Cloud agents.
 
+## Never speak as me
+
+When you write into GitHub or Slack, **my colleagues read it as me** — my judgment, my tone, my position. They have no way to tell an agent apart from me, and they shouldn't have to. So the default is absolute: **you draft, I post.**
+
+**Never write, on any repo, in any context:**
+
+- PR review comments, inline or top-level — including automated / bot-style review output
+- Approvals and requests-for-changes
+- Replies to a review thread, and resolving a thread
+- Issue comments, PR conversation comments, discussion posts
+- Slack messages, thread replies, and reactions that read as a position
+
+That covers `gh pr review`, `gh pr comment`, `gh api` POSTs against comment/review/thread endpoints, and any MCP tool that posts to Slack. **Reads are always fine** — `gh pr view`, `gh pr diff`, the GraphQL `reviewThreads` API, Slack history.
+
+**Not covered — these stay allowed:** commits and commit messages, pushes, branches, tags, opening or updating a PR *you built* (title, body, draft state, labels, reviewers). Code and its description are work product. Commentary is voice.
+
+**Instead:** write the reply text to a file and hand it to me. Say plainly that it's a draft and where it is. If a task seems to require posting, do everything up to that point and stop.
+
+**Why this earns its strictness.** Two reasons, and the second is the one that matters.
+
+1. It's already gone wrong: an agent posted a comment on a PR while closing it, when only the closing was authorized.
+2. **If nothing ever posts as me, my GitHub history stays a trustworthy record of what I actually think** — my real positions, my real voice, usable as evidence later and as a corpus for drafting in my voice. One agent-written comment in that history poisons all of it retroactively, because afterwards nothing in it can be trusted without checking. The value is in the *invariant*, not in any single comment.
+
 ## Defaults (apply unless I say otherwise)
 
 **Cite claims about the codebase.** Every statement about how this code works needs a `file:line` reference. If you can't cite, say "guessing — verifying" and go read the code before asserting.
@@ -63,5 +86,15 @@ Deprioritize or exclude: AI-generated content farms, marketing pages trying to s
 ## When a step genuinely doesn't apply
 
 Skip it — but say so in one line ("skipping enumeration: single-use helper") rather than silently. This keeps me honest about when the rigor is vs. isn't being applied.
+
+## Pull request descriptions
+
+**My personal template is the default for every PR I open, in any repo.** It lives in the `pr-description` skill and takes precedence over the repo's `.github/pull_request_template.md` and over any repo rule about PR descriptions (e.g. a `pull-request-description` rule under `.rulesync/`, `.cursor/rules/`, or a generated `.claude/rules/`). The repo's template is demoted to one job: supplying the **Checklist** section verbatim.
+
+This holds no matter what is driving the PR — a direct request, a repo skill that opens or closes out PRs, or a pipeline phase. Read the `pr-description` skill and follow it rather than the repo's shape.
+
+Sections, in order: **Ticket link → Description → Changes by function → How to test → Reviewer guide → Checklist.** Nothing else.
+
+PR titles are `[TICKET] short description`. Tickets live in Linear; the workspace slug is recorded in my private per-project memory.
 
 @RTK.md

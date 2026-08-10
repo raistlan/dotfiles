@@ -5,7 +5,6 @@ alias ga="git add ."
 alias gco="git checkout"
 alias gcm="git commit -m"
 alias gpoh="git push -u origin HEAD"
-alias rmg="rm /Users/raistlan/development/acme/.git/index.lock"
 
 # --- Workflow ---
 alias pnrd="git pull && npm run dev"
