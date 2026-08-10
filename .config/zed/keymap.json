@@ -97,7 +97,7 @@
   },
   {
     "bindings": {
-      "cmd-k l": "editor::CopyRelativePath"
+      "cmd-k l": "workspace::CopyRelativePath"
     }
   },
   {
