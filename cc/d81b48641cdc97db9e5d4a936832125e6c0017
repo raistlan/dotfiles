@@ -1,0 +1,23 @@
+.claude/skills/pr-description/SKILL.md
+  s_047fa9641b9720::t_8c97a78002db05 110
+.claude/skills/quality-pass/SKILL.md
+  s_047fa9641b9720::t_4cc18ac7eae6a3 55,104
+.claude/skills/zinsser/SKILL.md
+  s_047fa9641b9720::t_898afa2ffa04a4 45,98,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "ccd81b48641cdc97db9e5d4a936832125e6c0017",
+  "prompts": {},
+  "sessions": {
+    "s_047fa9641b9720": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4d4619d-f1a2-487e-beff-5cd52a3594f0",
+        "model": "claude-opus-5"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
