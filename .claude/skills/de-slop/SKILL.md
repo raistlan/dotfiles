@@ -69,12 +69,14 @@ Cite the codes in the `Fails` column. They're faster to scan than prose and they
 | `R3` | dissolvable by a better name or an extracted function |
 | `R4` | **factually false or stale** against the current code |
 | `R5` | over-written — the reason is real but does not need this many lines |
-| `R6` | development-process leakage (ticket / review / changelog / "as requested" / emoji) |
+| `R6` | development-process leakage (review / changelog / "as requested" / emoji), and **any ticket ID outside a `TODO`** — `(ACME-42)`, `(PROJECT-1337)` |
 | `D(x)` | duplicate — the same fact is stated at `x` |
 
 `NAME`, `SIG` and `TOC` are where docstring slop concentrates, and none of them is a "comment" failure mode — which is why a comments-only audit finds nothing.
 
-`R6` exception: a `TODO` tied to a tracked ticket, or a citation of a durable external reason (spec section, RFC, linked bug documenting a workaround's why).
+`R6` exception: a `TODO` tied to a tracked ticket. That is effectively the only place a ticket number belongs in a comment, because a `TODO` points at work that does not exist yet — nothing in the code or the history can tell the reader where it went. Every other ticket ID defaults to `Cut`.
+
+Non-ticket citations of a reason the reader cannot reach from the repo still earn their place (spec section, RFC, a named vendor limitation). An open bug in someone else's tracker is the one ticket-shaped survivor, and only when the workaround's why cannot be stated without it — write the why, then the link. An **internal** ticket ID is never that citation: the repo's own history already links the line to the ticket.
 
 ### The survival test is "does this earn its lines?"
 
@@ -83,6 +85,13 @@ Not "is it true?" — true-but-unnecessary is the most common surviving slop. A 
 **"Explains why" is necessary, not sufficient.** A block can name a real reason and still be slop if it's longer than that reason needs, or narrates the adjacent operation alongside it. Compress to the single load-bearing clause; if the why is one phrase, the comment is one line. A 3–4 line block guarding a one-line call is almost always over-written even when its content is genuinely "why" — `Rewrite` it, don't `Keep` it.
 
 **Cut process-leakage labels — don't compress them.** Inline planning/process labels are slop to **cut**, not shrink. A parenthetical like `(P1 mitigation)`, `(phase 2)`, a ticket-process reference, or a "step N of the plan" tag adds no durable why — passing "explains why" does not save it. Delete the label outright; keep only the load-bearing technical reason, if any, as its own one-line comment.
+
+**Outside a `TODO`, assume a ticket ID does not belong in the comment at all.** They are the hardest process leakage to catch because they ride along on comments that are otherwise load-bearing: a trailing `(TICKET-123)` on a genuine why-comment survives most audits, since the block earns its lines on its own merits and the ID reads as a citation rather than as the leakage it is. Cut the ID and keep the sentence. `git blame` already answers "which change introduced this line", and it keeps answering after tickets are renamed, merged, or migrated to another tracker — an inline ID silently stops resolving. Two shapes, with different fixes:
+
+- **Provenance** — the ID appended to explain why the line exists: `# ...so they never enter this step (PROJECT-1337).` Drop the parenthetical, keep the clause.
+- **Identifier** — the ID standing in for a *name*, as in "this never reaches the `PROJECT-1337` guard below it". Deletion would break the sentence, so **rename the referent to what it does** — "the has-started-SYNC guard below it" — and the reference resolves against the code instead of against a tracker. Verify the new name against the code you are pointing at; a renamed referent is a new factual claim and owes `R4`.
+
+This applies to docstrings too, where the shape is usually a "deliberately narrows the `TICKET-123` rule" sentence in a regression test. Name the behavior it narrows, not the ticket that changed it.
 
 ### R4 is the highest-yield check in the pass — run it against the code, not against plausibility
 

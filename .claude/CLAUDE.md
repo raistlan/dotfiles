@@ -63,6 +63,14 @@ If there are too many to enumerate, tell me the count and give a representative 
 - **No `Any`/`any` casts to dodge a type error.** Fix the type at its source, narrow, or validate at the boundary.
 - **Inline single-use indirection.** A constant or helper read exactly once is usually just indirection — inline it.
 
+**Never hard-wrap markdown.** Write each paragraph as one unbroken line. Do not wrap at 72, 80, or 100 columns. Do not insert mid-paragraph linebreaks. Semantic linefeeds are not an exception.
+
+The exception is tooling, not taste. If a repo configures `prettier --prose-wrap always`, an `.editorconfig` `max_line_length`, or markdownlint MD013, follow that config. Check for it before you assume. Without such a config, do not wrap.
+
+Wrapping renders identically to not wrapping, so nothing corrects the habit. The costs land elsewhere: a one-word edit becomes a twelve-line diff, and `grep` misses any phrase that straddles a break.
+
+Two places this slips. Tell subagents explicitly — they hard-wrap by default and inherit nothing. Apply it wherever the file lands, not where the session started; a doc written into `~/development/workdiary` from another repo still follows this rule. Do not reflow existing files unless I ask.
+
 ## External research for examples and patterns
 
 When I ask for examples, patterns, or guidance that requires looking outside this codebase, apply these filters (aligned with Anthropic's own guidance to Claude for web search):
