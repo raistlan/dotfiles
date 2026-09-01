@@ -97,7 +97,7 @@ Drive a review→fix loop, **capped at 3 rounds**, on the working branch. Each r
 
 After 3 review→fix rounds, **stop even if High/Medium remain** — do not loop indefinitely. Record the unresolved findings and return them as residuals; the caller surfaces them at its own sign-off gate. The report carries: one line per round (`round N: H·M·L counts`), what was fixed each round, and any residuals (unresolved-after-cap or listed-Low).
 
-`bugbot` is a repo-scoped skill (it lives at `.claude/skills/bugbot/` and enforces the repo's `BUGBOT.md` rules). If neither the skill nor that path is present — e.g. a run outside the acme repo — run lens B alone and note the absence in the report. Lens B is the one that finds High severities; it is never the lens you skip.
+`bugbot` is a repo-scoped skill (it lives at `.claude/skills/bugbot/` and enforces the repo's `BUGBOT.md` rules). If neither the skill nor that path is present — e.g. a run outside the work monorepo — run lens B alone and note the absence in the report. Lens B is the one that finds High severities; it is never the lens you skip.
 
 ### The out-of-module lens
 

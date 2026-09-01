@@ -114,8 +114,8 @@ Show the edit, do not just describe it. For a short target, give the rewritten t
 
 Three names for one thing. Pick `record` and use it three times.
 
-## Relationship to other skills in this repo
+## Relationship to other writing skills
 
-- `readability-scorecard` scores a document against readability standards and produces a scorecard. Use it for a review pass on a finished doc. Use `zinsser` when you want the text itself rewritten in this style.
-- `product-copy-evaluator` covers user-facing product copy and Acme brand voice. That takes precedence for anything an end user reads in the product. `zinsser` is for internal and technical writing.
-- `repo-pr-description` and `.rulesync/rules/pull-request-description.md` define PR description *structure*. `zinsser` governs the prose inside that structure; it does not override the required sections.
+- A readability-scorecard skill scores a document against readability standards. Use it for a review pass on a finished doc. Use `zinsser` when you want the text itself rewritten in this style.
+- A repo's own product-copy or brand-voice skill covers user-facing copy. That takes precedence for anything an end user reads in the product. `zinsser` is for internal and technical writing.
+- A repo's own PR-description skill or rule (e.g. under `.rulesync/`, `.cursor/rules/`) defines PR description *structure*. `zinsser` governs the prose inside that structure; it does not override the required sections.
