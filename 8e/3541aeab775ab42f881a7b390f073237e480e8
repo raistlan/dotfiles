@@ -1,0 +1,25 @@
+.claude/skills/de-slop/SKILL.md
+  s_047fa9641b9720::t_5c57a46cc01167 72,92
+.claude/skills/napkin/SKILL.md
+  s_047fa9641b9720::t_5e0f12717adbb1 33,35,38,65,181,209,218,230,234,241,248,261
+.claude/skills/quality-pass/SKILL.md
+  s_047fa9641b9720::t_9124dda9fdd8b1 100
+.claude/skills/zinsser/SKILL.md
+  s_047fa9641b9720::t_f65794c6def556 117,119-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8e3541aeab775ab42f881a7b390f073237e480e8",
+  "prompts": {},
+  "sessions": {
+    "s_047fa9641b9720": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4d4619d-f1a2-487e-beff-5cd52a3594f0",
+        "model": "claude-opus-5"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
