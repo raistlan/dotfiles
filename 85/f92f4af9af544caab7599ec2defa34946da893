@@ -1,0 +1,21 @@
+.claude/skills/napkin/SKILL.md
+  s_047fa9641b9720::t_81f235466bfbce 64
+.claude/skills/pr-description/SKILL.md
+  s_047fa9641b9720::t_8cd498bd4aca62 192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "85f92f4af9af544caab7599ec2defa34946da893",
+  "prompts": {},
+  "sessions": {
+    "s_047fa9641b9720": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4d4619d-f1a2-487e-beff-5cd52a3594f0",
+        "model": "claude-opus-5"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
