@@ -1,0 +1,22 @@
+.claude/CLAUDE.md
+  h_22901c53231748 66-73
+.claude/skills/de-slop/SKILL.md
+  h_22901c53231748 72,77-79,89-95
+.claude/skills/work-with-linear-project/SKILL.md
+  h_22901c53231748 1-19
+.claude/skills/zinsser/SKILL.md
+  h_22901c53231748 1-121
+.config/zed/settings.json
+  h_22901c53231748 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a704dd2dcba18346a380a5001b108a63460998aa",
+  "prompts": {},
+  "humans": {
+    "h_22901c53231748": {
+      "author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
