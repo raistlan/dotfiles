@@ -56,6 +56,8 @@ Three checks, every cycle, before anything else. Each of these has produced a co
 
 Pull them all via the GraphQL `reviewThreads` API, not by eyeballing the PR page. Include threads GitHub marks `outdated`. Do not include threads that are marked as resolved. For a stack, do this per PR and record which PR each thread lives on; the fix can belong on a *lower* PR than the thread.
 
+**Re-pull before you push and again before you draft replies.** A reviewer who is live keeps commenting while you work; one cycle missed a thread posted sixty seconds after the inventory ran and shipped the PR without it. The inventory is a snapshot, not a state.
+
 ### 2 — Verify "outdated" before believing it
 
 GitHub marks a thread outdated when its anchor line moved, **not** when its point was addressed. A thread can be outdated and exist somewhere else.
@@ -100,6 +102,8 @@ Invoke the **`/quality-pass`** skill once per PR — never reimplement it. It ow
 - **Surface** from `state.json`, and the worktree path.
 
 It surfaces its own cut-candidate gate and returns residual High/Medium findings. Fold those residuals into this cycle's artifact — they're your problem now, not a future cycle's.
+
+**The test audit has two halves, and both are owed on every PR you touched.** Necessity (the mutation-backed kill matrix: which cases stay) and shape (`/quality-pass` Step 1b: lines per case, tables for cases that differ only by inputs, whole-object assertions, prose only where the id cannot carry it). A reviewer comment along the lines of "validate each test is worth its cost" or "these tests are verbose, we're testing one method" means the shape half was skipped last cycle; treat it as a Mechanical bucket item and run Step 1b on that file, not as a new kind of ask. Report `cases · lines · lines/case` before and after in the cycle artifact.
 
 ### 5b — Regenerate the PR description
 
@@ -186,6 +190,6 @@ Trying to absorb a reshape inside a review cycle is how a 3-PR stack becomes a 5
 ## Conventions
 
 - Cite the domain or sub-domain and `file:line` for every claim about the code. Verify before asserting.
-- Ask before pushing. Push with `--force-with-lease=<ref>:<expected-sha>`, never bare `--force`.
+- Push with `--force-with-lease=<ref>:<expected-sha>`, never bare `--force`.
 - Never `--no-verify`.
 - Reuse the parent ticket for follow-ups unless the human names a new one.

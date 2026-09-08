@@ -161,6 +161,12 @@ No repo template exists → use a short generic checklist (tests added, DB chang
 
 **These six and nothing else.** No Follow-ups, Notes, Background, Summary, or changelog sections — they leak process and aren't what a reviewer needs.
 
+## Prose pass
+
+Before you show me the body, run the `zinsser` skill over it with the Skill tool. Do not approximate it from memory — it is the prose standard for every section here.
+
+Apply it to prose only. Leave commands, paths, `file:line` references, table values, and the checklist copied verbatim alone. Then check the length budget below; the zinsser pass usually buys back the lines.
+
 ## Length budget
 
 A reviewer skims this before reading the diff. If the body is long enough to need skimming itself, it has failed. The budget bites on the prose sections; How to test is exempt, because coverage is worth more than brevity there.

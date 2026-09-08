@@ -65,6 +65,19 @@ The subagent returns `N cases · X auto-cut · Y awaiting decision`, then the Y 
 
 **The cut-candidate gate.** Surface those Y rows to the user one at a time, ending the turn with `--- HUMAN GATED ---`. For each "cut" answer, spawn a quick follow-up to remove the test and re-run. Skip the gate entirely when `Y = 0` — it should be silent when it doesn't fire.
 
+### Step 1b — Shape: lines per case, once necessity is settled
+
+Necessity says which cases stay. It says nothing about how many lines they take, and AI-written suites run long on a second axis: one function under test, spread across a dozen near-identical methods, each with a docstring restating its name. Two review rounds in a row asked for this by hand ("validate that each test is worth its cost"; "make these less verbose while maintaining their quality, we're testing one method"), so it is part of the audit, not a follow-up the reviewer has to request.
+
+After the cut, for every test file in the diff, report `cases · lines · lines/case` before and after, and apply:
+
+- **Table what shares a shape.** Cases that call the same function with the same arrange/act and differ only in inputs and expected values become one `parametrize` with `pytest.param(..., id=...)` rows whose ids carry the claim. A class with N methods that differ by a constant is the tell.
+- **Assert the whole result.** Compare the returned object or dataclass once (`== Expected(a, b, c)`) instead of one field per line. Shorter, and it pins the fields the original author forgot to assert.
+- **Prose only where the id cannot carry it.** A test docstring earns its place by stating a why the name and id do not: a product decision, the defect it guards, a non-obvious fixture constraint. Restating the name or the assertion is cut. Helper docstrings are one line.
+- **Fold hand-rolled setup into the helper.** If one test bypasses a fixture or helper to set one extra field, give the helper the parameter instead.
+
+The shape pass never changes the case count the mutation matrix approved; if a table would drop or merge a row, that goes back through the verdicts above. Yardstick from the runs that prompted this: a 23-case resolver suite went 602 to 413 lines with every kill intact, and a 28-case parser suite sits near 12 lines per case. Above roughly 20 lines per case on a single-function suite, the pass has not been done.
+
 ## Step 2 — Cut (de-slop)
 
 Two sequential agents — a focused simplifier, then the de-slop subagent — because `code-simplifier` is a narrow agent that won't write artifacts or run the prose audit.

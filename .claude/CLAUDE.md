@@ -25,6 +25,23 @@ That covers `gh pr review`, `gh pr comment`, `gh api` POSTs against comment/revi
 1. It's already gone wrong: an agent posted a comment on a PR while closing it, when only the closing was authorized.
 2. **If nothing ever posts as me, my GitHub history stays a trustworthy record of what I actually think** — my real positions, my real voice, usable as evidence later and as a corpus for drafting in my voice. One agent-written comment in that history poisons all of it retroactively, because afterwards nothing in it can be trusted without checking. The value is in the *invariant*, not in any single comment.
 
+### Linear is the one carve-out
+
+Linear is internal project bookkeeping, not commentary in my voice, so draft-only does not apply there. **GitHub and Slack are unchanged — everything above stands in full for both.**
+
+**Post Linear comments on my behalf** without asking first, provided every one is marked. A comment is marked when its body **begins with the literal string `raistlan-bot 🤖`** — first characters of the first line, before anything else. Follow it with who instructed the work, then the content.
+
+No label, no other mechanism. Just that prefix, every time. The marking is the entire basis for the permission: an unmarked agent comment in Linear is the same failure as an agent comment on GitHub.
+
+**Update Linear tickets directly** — titles, descriptions, acceptance criteria, testing steps, status, relations, milestones. Two conditions:
+
+- **Preserve the template.** Tickets follow a fixed shape: Acceptance criteria → Testing → References → Out of scope → `Local planning ID`. Keep every section that was there, keep its heading, keep its order. Add to a section rather than restructuring it. An edit must never leave a ticket that no longer matches its siblings.
+- **Leave a marked comment for any substantive edit.** A retitle, a changed acceptance criterion, or a scope change needs a `raistlan-bot 🤖` comment saying what changed and why. Ticket-body and document edits carry no authorship signal in Linear's UI, so that comment is the only trace. Typo and formatting fixes don't need one.
+
+**Governing documents follow their own rules first.** A project's working agreement may be stricter than this file — the Minor IDV project, for one, lets an agent record a Decision Log entry but never edit the Tech Spec, and requires a source and date on Glossary edits. Read the working agreement before editing anything it governs; where it is stricter, it wins.
+
+Still ask before creating or deleting a Linear project, milestone, or document; before bulk status changes across many issues; and before anything that *resolves* a decision rather than recording one. An agent records decisions. It never gets to be the decider.
+
 ## Defaults (apply unless I say otherwise)
 
 **Cite claims about the codebase.** Every statement about how this code works needs a `file:line` reference. If you can't cite, say "guessing — verifying" and go read the code before asserting.
@@ -53,6 +70,8 @@ If there are too many to enumerate, tell me the count and give a representative 
 - Compatibility / breaking-change risks
 
 **Surface uncertainty before I ask.** Tell me what's guessed vs. verified, what assumptions you made, and what inputs or files you couldn't reach.
+
+**Name the session and keep the links in reach.** When work touches a ticket or PR, rename the session to `TICKET · #PR · short title` as soon as each part is known. In every status message, link the PR and the ticket directly, so I never scroll to find them.
 
 **Anchor new features on recent, relevant prior art.** When building something new, find the most recent close analogue in the codebase and use it as the template. Cite it and explain why it's the right analogue.
 
