@@ -1,0 +1,21 @@
+.claude/.gitignore
+  s_406e8e29ec9cd6::t_a793954d429749 8-10
+.claude/skills/de-slop/SKILL.md
+  s_406e8e29ec9cd6::t_eb6ffe21ba1683 3,32-39,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "c5a38e577d6d412a09c3be38919c712e2de58ee6",
+  "prompts": {},
+  "sessions": {
+    "s_406e8e29ec9cd6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7601664-5b87-4146-a631-9aef2205ccc1",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
