@@ -62,6 +62,7 @@ If there are too many to enumerate, tell me the count and give a representative 
 - **No defensive checks or try/catch beyond the local file's norms.** Don't guard inputs that trusted, validated callers already guarantee.
 - **No `Any`/`any` casts to dodge a type error.** Fix the type at its source, narrow, or validate at the boundary.
 - **Inline single-use indirection.** A constant or helper read exactly once is usually just indirection — inline it.
+- **Decompose by narrative, not mechanism** (full rubric: `code-shape` skill). The public function reads top to bottom as the algorithm. Extract a helper only for a policy a reviewer would inspect on its own, name it with a verb so the call site reads as a clause, and keep one-line expressions inline even with two or three callers. Closed sets of reasons are enums. Comments are facts on the line they govern.
 
 **Never hard-wrap markdown.** Write each paragraph as one unbroken line. Do not wrap at 72, 80, or 100 columns. Do not insert mid-paragraph linebreaks. Semantic linefeeds are not an exception.
 

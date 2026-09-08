@@ -69,7 +69,7 @@ The subagent returns `N cases · X auto-cut · Y awaiting decision`, then the Y 
 
 Two sequential agents — a focused simplifier, then the de-slop subagent — because `code-simplifier` is a narrow agent that won't write artifacts or run the prose audit.
 
-**The rubric lives in the portable `de-slop` skill and that skill is the single source of truth**: the per-block prose audit (docstrings **and** comments), the rule codes, the abstraction audit, and the diff scope rule. Do not restate it here — a second copy drifts, and a drifted copy of this particular rubric is how two passes cut zero.
+**The rubric lives in the portable `de-slop` skill and that skill is the single source of truth**: the per-block prose audit (docstrings **and** comments), the rule codes, the abstraction audit, the shape audit it delegates to the `code-shape` skill, and the diff scope rule. Do not restate it here — a second copy drifts, and a drifted copy of this particular rubric is how two passes cut zero.
 
 **2a — Simplify (trial).** Spawn Anthropic's official `code-simplifier` agent (`agentType: code-simplifier`) on the files the diff touched. It eliminates redundant code / abstractions, dense one-liners, and obvious comments while preserving behavior. Capture its returned summary. *We're trialing this — record what it caught so we can judge whether it earns its place vs. `/clean-up-ai-slop` alone.* (Needs the `code-simplifier@claude-plugins-official` plugin enabled; if the agent type is unavailable, skip 2a, note it in the report, and run only 2b.)
 
@@ -80,8 +80,9 @@ Two sequential agents — a focused simplifier, then the de-slop subagent — be
 1. **Were docstrings enumerated?** The report must carry a coverage table with a *docstring line count*, not just a comment count. Two passes on one feature audited 68 comments and cut **zero**; a later pass on the same code found 911 prose lines of which **763 were docstring** and cut or rewrote 80% of them. If the coverage table has no docstring column, the pass didn't happen — send it back.
 2. **Was the cut rate plausible?** Under ~30% cut-or-rewrite on AI-written code usually means under-enumeration, not clean prose.
 3. **Were `R4` (false claim) findings listed separately?** Those are bugs in the record, not style. Across one feature the truth check caught ~16–20 false comments and stayed the highest-yield check to the final cycle — including two the *cleanup itself* introduced.
+4. **Was the shape audit run?** The report must carry the `code-shape` table (every new private helper and constant, policy vs mechanism, verdict) with a net helper count before and after. A pass that only inlines single-use helpers has not run it: the helpers that survive review rounds have two or three callers, a noun name, and a six-token body, and a reviewer has spent three rounds asking "do we really need a whole private helper for this?" because nothing upstream asked first.
 
-The report carries: what `code-simplifier` caught in 2a (the trial signal), the coverage table, the prose-audit table, the non-prose slop removed in 2b, the `R4` findings, and the net line delta. It goes wherever the caller said, or back inline if they said nothing.
+The report carries: what `code-simplifier` caught in 2a (the trial signal), the coverage table, the prose-audit table, the shape-audit table, the non-prose slop removed in 2b, the `R4` findings, and the net line delta. It goes wherever the caller said, or back inline if they said nothing.
 
 ## Step 3 — Self-review (two-lens review→fix loop)
 

@@ -1,6 +1,6 @@
 ---
 name: de-slop
-description: "Strip AI-generated slop from a change — over-written prose (docstrings AND comments), unneeded defensive checks/try-catch, Any/any casts that dodge types, and single-use indirection. Runs an abstraction audit and a per-block prose audit table over the whole diff, then cuts. Use when the user asks to de-slop, clean up AI slop, audit comments or docstrings, or tighten a diff before review."
+description: "Strip AI-generated slop from a change — over-written prose (docstrings AND comments), unneeded defensive checks/try-catch, Any/any casts that dodge types, single-use indirection, and mechanism-decomposed helpers (via the code-shape skill). Runs an abstraction audit, a shape audit, and a per-block prose audit table over the whole diff, then cuts. Use when the user asks to de-slop, clean up AI slop, audit comments or docstrings, or tighten a diff before review."
 user-invocable: true
 ---
 
@@ -28,6 +28,14 @@ Beyond line-count tells, list *every* new module-level constant, helper, or wrap
 - (c) is a documented config knob.
 
 A `NAME = "literal"` or `NAME = SomeEnum.MEMBER` used in a single spot fails this. So does a one-line helper wrapping a single expression. Enumerate them all — don't sample.
+
+**(a) is not a pass by itself.** A one-expression helper with two or three callers, a two-entry lookup table plus its wrapper, and a noun-named helper whose call site does not read as a clause all clear this audit and are still slop. They go through the shape audit below.
+
+## Shape audit (decomposition, naming, closed sets)
+
+**The rubric lives in the `code-shape` skill and that skill is the single source of truth.** Run its shape audit table over the same diff after the abstraction audit: every new private helper, module constant, and bare-category local (`missing`, `reads`, `result`), classified policy vs mechanism, with the call-site-reads-as-a-clause test and the repetition spectrum. Verdicts are `Keep` / `Rename` / `Inline` / `Enum` / `Fold`. Then check that each public function reads top to bottom as the algorithm and that parallel functions carry the same TODOs and log keys.
+
+This is the audit that catches what the abstraction audit exempts: the helper with three callers that names a six-token expression, the lookup dict that is an `if`/`elif`, the free-text reason strings that should be a `StrEnum`. Its findings go in the report as their own table with the net helper count before and after.
 
 ## Prose audit (docstrings AND comments — enumerate, don't sample)
 
@@ -115,6 +123,7 @@ Report concisely:
 - the coverage table (so under-enumeration is visible),
 - the prose-audit table,
 - the abstraction-audit findings (which single-use indirections were inlined),
+- the shape-audit table from `code-shape` (helpers renamed, inlined, folded, or promoted to an enum; net helper count before and after),
 - the non-prose slop removed (defensive checks, casts, style),
 - the net line delta,
 - any debatable rows left for the user,
