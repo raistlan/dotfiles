@@ -1,0 +1,26 @@
+.claude/CLAUDE.md
+  h_22901c53231748 28-44,74-75
+.claude/skills/cursor-relay/SKILL.md
+  h_22901c53231748 3,7,12,15,17-23,25,27,29-31,33,43-83,88-90
+.claude/skills/cursor-relay/scripts/cloud.sh
+  h_22901c53231748 1-135
+.claude/skills/phase-9/SKILL.md
+  h_22901c53231748 59-60,106-107,193
+.claude/skills/pr-description/SKILL.md
+  h_22901c53231748 164-169
+.claude/skills/quality-pass/SKILL.md
+  h_22901c53231748 68-80
+.claude/skills/unslop/SKILL.md
+  h_22901c53231748 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "691da313d7674690176ecd13ffda33a4dd3f9c1d",
+  "prompts": {},
+  "humans": {
+    "h_22901c53231748": {
+      "author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
