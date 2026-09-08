@@ -1,0 +1,23 @@
+.claude/agents/conductor.md
+  s_3c3f7898c37053::t_bc60480f9b0f71 1-59
+.claude/agents/developer.md
+  s_3c3f7898c37053::t_690dff0f5ebff0 5-6
+.claude/skills/conductor/SKILL.md
+  s_3c3f7898c37053::t_ff65ce246da87f 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4af37528f695109a8c1ea227a3bbf73d4e59afce",
+  "prompts": {},
+  "sessions": {
+    "s_3c3f7898c37053": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67bedb19-5b31-4b66-a23c-4e617451a9a9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
