@@ -1,0 +1,19 @@
+.claude/skills/phase-9/SKILL.md
+  s_56920546969f36::t_ff68344497e655 41-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "0513e948c8b7bbf638bfd5b38a28f0501810a2b9",
+  "prompts": {},
+  "sessions": {
+    "s_56920546969f36": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2982674-e483-4d5f-99ed-df4d067d5581",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>"
+    }
+  }
+}
