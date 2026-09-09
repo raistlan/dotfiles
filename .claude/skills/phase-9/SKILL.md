@@ -38,6 +38,8 @@ Number `NN` continues the run dir's existing sequence. Never renumber or overwri
 
 **Read order at boot:** `README.md` first (it carries a DO-NOT-UNDO list, a reversal log, and environment traps), then `state.json`, then the most recent `NN-review-cycle-*.md`. Earlier numbered artifacts are history and may record decisions since reversed.
 
+**Rename the session at boot** to `<TICKET> pr #<PR> phase-9` (e.g. `NETI-123 pr #94567 phase-9`), as the first action after the read order above — the ticket comes from the run dir name and the PR number from `state.json`; for a stack, use the tip PR. The user runs many parallel sessions, and a title without the ticket, the PR, and the phase is unscannable in the job list. If the harness can't rename programmatically, lead your first message with `Session: <TICKET> pr #<PR> phase-9` so the user can rename it with one keystroke.
+
 ---
 
 ## Before you reason about any branch
