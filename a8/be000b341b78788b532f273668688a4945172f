@@ -1,0 +1,22 @@
+.claude/skills/pr-description/SKILL.md
+  s_8008aac3fe8be8::t_c64be100041995 3,14-15,89-106,108,110-113,115,117,119,121-125,129-140,142-146,148,179-181,188-190,206,213-214,222,226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8be000b341b78788b532f273668688a4945172f",
+  "prompts": {},
+  "sessions": {
+    "s_8008aac3fe8be8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0bfebd3-fa68-4c73-8ff8-a0780fdb371f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>",
+      "custom_attributes": {
+        "runtime": "local"
+      }
+    }
+  }
+}
