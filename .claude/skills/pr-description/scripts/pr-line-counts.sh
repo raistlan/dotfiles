@@ -26,6 +26,8 @@ function classify(p) {
   if (p ~ /(openapi-spec\.json|\/generated\/|\/__generated__\/|\.gen\.|_pb2\.py|\.generated\.)/) return "generated"
   if (p ~ /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|poetry\.lock|uv\.lock)$/) return "generated"
   if (p ~ /^\.cursor\/rules\//) return "generated"
+  if (p ~ /web\/packages\/api\/src\/(models|resources|descriptors)\//) return "generated"
+  if (p ~ /(^|\/)service\.datadog\.yaml$/) return "generated"
   if (p ~ /(\/|^)(migrations|alembic|versions|fixtures)\//) return "fixtures"
   if (p ~ /fixture[^\/]*\.(json|ya?ml|sql|csv)$/) return "fixtures"
   if (p ~ /(\/|^)(tests?|unit_tests|__tests__|__mocks__|e2e)\//) return "tests"
@@ -62,14 +64,34 @@ function classify(p) {
 END {
   n = split("logic tests docs config generated fixtures", order, " ")
   total = tadd + tdel
-  print "| Function | Files | +Added | -Removed | % of diff |"
-  print "| --- | --- | --- | --- | --- |"
+  # Rounding each bucket on its own lets the column sum to 99 or 101 against a
+  # Total row that always claims 100%. Apportion by largest remainder instead:
+  # floor every share, then hand the spare points to the biggest fractions.
   for (i = 1; i <= n; i++) {
     b = order[i]
     churn = add[b] + del[b]
     if (churn == 0) continue
-    pct = total > 0 ? int((churn * 100 + total / 2) / total) : 0
-    printf "| %s | %d | +%d | -%d | %d%% |\n", b, files[b], add[b], del[b], pct
+    idx[++shown] = b
+    exact = total > 0 ? churn * 100 / total : 0
+    pct[b] = int(exact)
+    rem[b] = exact - pct[b]
+    floorsum += pct[b]
+  }
+  leftover = total > 0 ? 100 - floorsum : 0
+  while (leftover-- > 0) {
+    best = ""; bestrem = -1
+    for (i = 1; i <= shown; i++) {
+      b = idx[i]
+      if (rem[b] > bestrem) { bestrem = rem[b]; best = b }
+    }
+    if (best == "") break
+    pct[best]++; rem[best] = -1
+  }
+  print "| Function | Files | +Added | -Removed | % of diff |"
+  print "| --- | --- | --- | --- | --- |"
+  for (i = 1; i <= shown; i++) {
+    b = idx[i]
+    printf "| %s | %d | +%d | -%d | %d%% |\n", b, files[b], add[b], del[b], pct[b]
   }
   printf "| **Total** | %d | +%d | -%d | 100%% |\n", tfiles, tadd, tdel
 }
