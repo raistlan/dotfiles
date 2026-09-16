@@ -1,0 +1,24 @@
+.claude/skills/pr-description/SKILL.md
+  s_8008aac3fe8be8::t_9badc45551096c 16-44,78,80,83-85,88-91,110,120,130-131,154,158-179,226,268,271,282-302
+.claude/skills/pr-description/scripts/pr-line-counts.sh
+  s_8008aac3fe8be8::t_fc9b231b446d87 29-30,67-69,74-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "71a8dcf4fefa21a3f40abcfd7a77355cfce29cbc",
+  "prompts": {},
+  "sessions": {
+    "s_8008aac3fe8be8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0bfebd3-fa68-4c73-8ff8-a0780fdb371f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "raistlan <raistlan@users.noreply.github.com>",
+      "custom_attributes": {
+        "runtime": "local"
+      }
+    }
+  }
+}
