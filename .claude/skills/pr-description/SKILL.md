@@ -1,6 +1,6 @@
 ---
 name: pr-description
-description: Generate a pull-request description using my personal PR template, which takes precedence over any repo-provided template. Use when the user asks to write/draft a PR description, fill out a PR body, describe a branch for a PR, or open/update a PR. Reads the diff and file list only (never the plan/chat/workpad) so the description reads for someone with zero prior context. Produces ticket link, why+how description, line counts by function, exhaustive numbered test steps, reviewer guide, and the repo's own checklist verbatim.
+description: Generate a pull-request description using my personal PR template, which takes precedence over any repo-provided template. Use when the user asks to write/draft a PR description, fill out a PR body, describe a branch for a PR, or open/update a PR. Reads the diff and file list only (never the plan/chat/workpad) so the description reads for someone with zero prior context. Produces ticket link, why+how description, line counts by function, test steps a reviewer can execute without guessing (12 max, one action each), a reviewer guide of at most three categories from a fixed list, and the repo's own checklist verbatim.
 effort: medium
 context: fork
 ---
@@ -10,6 +10,8 @@ context: fork
 This template is **my default for every PR I open**, in any repo. It takes precedence over the repo's `.github/pull_request_template.md` and over any repo rule about PR descriptions.
 
 The repo's template is not ignored — it is **demoted to one job**: supplying the Checklist section verbatim. Everything else follows the shape below.
+
+**What the body is for.** It is a reviewer's *introduction* to the PR: enough to orient them before they open the diff, plus a short path to convincing themselves the change works. It is not a QA script, a changelog, or a guided tour of the code.
 
 ## Precedence
 
@@ -84,33 +86,66 @@ The bucket names are heuristics tuned to my repos. If the classifier obviously m
 
 ## Step 4 — How to test
 
-**Always a numbered list.** Exhaustive: cover the happy path, each behavioral branch the diff introduces, and the negative/guard cases. A reviewer should be able to execute it top to bottom without asking me anything.
+**A reviewer follows this to convince themselves the change works.** Any command a developer can run belongs here — `curl`, a flag flip in LaunchDarkly, clicks in the browser, a test command, a local server, a query against a dev database, a log tail. The constraint is not the tool, it is the purpose: **every step must exercise behavior.** A step that produces no observable result is not a test step.
 
-**This is the one section allowed to run long.** Never drop a case to save space — step count is fine, so add the step. What to avoid is *wordy* steps: keep each to one line, and collapse the negative/guard cases into a single step holding a two-column table (what to change → expected skip reason / outcome), which keeps every case visible for a fraction of the words.
+**Twelve steps is the ceiling, and there is no floor.** Three pointed steps beat twelve hedged ones.
 
-Every step names a concrete surface — a URL, a route, an endpoint, a command. Never "test the feature". Include setup (which app to run, which test account or fixture persona, which feature flag and what to set it to) as numbered steps, not as prose preamble.
+### One line, one action, no decisions
 
-Skip the glossary. Define a term inline in the step that first uses it, in a clause, or not at all.
+Each step is one imperative sentence a reviewer executes without stopping to work out *how*. Give the literal thing:
 
-Pick the surface from what the diff actually touches:
+- **`curl`** — the whole command, pasteable, and the one field in the response to check.
+- **LaunchDarkly** — the literal flag key and the value to set. "Turn on `scheduling-weekend-jobs` for your user", not "enable the feature".
+- **Browser** — the route, the control by its visible label, and what changes on screen.
+- **A command** — the command as typed, and what passing looks like in one clause.
 
-- **HTTP endpoint changed** → give a runnable `curl` with the real path, method, and a payload built from the request model in the diff, plus the expected status and response shape.
-- **Service, task, or workflow with no direct HTTP surface** → name the trigger (the celery task, temporal workflow, management command, or the user action that enqueues it) and the observable side effect (a DB row, a queued notification, a log line, a provider dashboard).
-- **Frontend changed** → the app, the route, and the interaction; what renders before vs after.
-- **Both sides changed** → both, backend first, then the UI surface that proves it end to end.
+"Create a user relationship between two patient accounts" fails the bar — the reviewer doesn't know what to click or what to post. Give the clicks, give the `curl`, or cut the step. When a step needs a caveat to run correctly, fold it into the command instead of writing a sentence about it.
 
-Also state how to verify it *doesn't* fire when it shouldn't — the cohort that's excluded, the flag off, the consent gate unmet. Guard cases are where these PRs actually break.
+Setup is numbered steps, not prose preamble: the flag to flip, the account or persona to log in as, the host or service to point at.
+
+### Never a test step
+
+These read like steps but ask the reviewer to *inspect* rather than verify. Cut them — reading the diff is what a PR review already is:
+
+- **Reading code** — "read the routing arrangement in three places", "note the old class is deleted". If it matters, it's a Reviewer guide bullet with a `file:line`.
+- **Confirming the diff** — that a file moved, that codegen filed a route, that a manifest changed. The diff and the Changes by function table are the evidence.
+- **Reading another PR first** — stack order lives in the base ref, not in test steps.
+- **Breaking the code to watch it fail** — deleting an import, reverting a guard, then putting it back. Interesting; not QA.
+
+### Guard cases
+
+Fold the negative cases into one step holding a two-column table (what to change → expected outcome), four rows at the outside. That keeps every guard visible for the cost of one step, and guard cases — flag off, cohort excluded, consent gate unmet — are where these PRs actually break.
+
+Skip the glossary. Define a term in a clause inside the step that first uses it, or not at all.
+
+**When the change has no user-reachable surface** — an internal refactor, a task with no endpoint or UI — the test command *is* the step: one line with the command and the expected result. Don't pad it with runtimes, file inventories, or where the cases live.
+
+### Read it back as a list
+
+Before you hand it over, read the numbered list on its own, the way a reviewer meets it. Every step should be clear on one pass. Any step that needs a second read, or that a reviewer would have to ask you about, gets rewritten or cut.
 
 ## Step 5 — Reviewer guide
 
-Point at the interesting question — the one a thoughtful reviewer would ask anyway.
+**Pick at most three categories from the fixed list below. Nothing outside the list may appear here.** The value is in the choosing — a guide that flags everything guides nobody. Fewer is fine and usually better; one sharp category beats three padded ones.
 
-- **Focus areas** — where the real decisions live (module/submodule and `file:line`).
-- **Mechanical** — plumbing, wiring, generated code that can be skimmed.
-- **Risky** — auth, billing, personal information, data models, or other sensitive areas, with line refs.
-- **Pattern** — if this follows existing prior art, name it so reviewers can diff against it.
+| Category | What it covers |
+| --- | --- |
+| **Correctness** | The logic most likely to be wrong — the invariant, the edge case, the retry or idempotency path. |
+| **Blast radius** | A changed signature, contract, or shared shape, and the callers it reaches. |
+| **Data** | Schema change, migration, backfill, or a write that can't be undone. |
+| **Security & privacy** | Auth, permissions, tenant isolation, secrets, personal or health information. |
+| **Performance** | Query count, N+1, payload size, or new work on a hot path. |
+| **Rollout** | Flag gating, deploy ordering, or behavior while both versions run at once. |
+| **Prior art** | The analogue this copies, so a reviewer can diff against it instead of reading cold. |
+| **Tradeoff** | A decision with a real alternative, where I want a second opinion. |
 
-Brief bullets. This is where load-bearing `file:line` references go.
+One line per category, each carrying a load-bearing `file:line`. Name the question; don't summarize the code:
+
+```markdown
+- **Blast radius** — `notifications/dispatch.py:88` now requires `channel`; all four callers updated, and `billing/receipts.py:210` is the one that can still pass `None`.
+```
+
+No category genuinely applies — a rename, a dependency bump, regenerated output — then write one line saying the diff is mechanical and why. Don't reach for a category to fill the section, and don't invent `Mechanical` as one: the Changes by function table already shows the skimmable share.
 
 ## Step 6 — Checklist
 
@@ -141,19 +176,18 @@ No repo template exists → use a short generic checklist (tests added, DB chang
 ...
 
 ### How to test
-1. <setup: app, account, flag>
-2. <exercise the happy path + what to assert>
-3. <exercise each behavioral branch>
+1. <setup: flag key + value, test account, host>
+2. <curl / click, with the expected status or on-screen result>
+3. <the next behavioral branch, same shape>
 4. Guard cases — each must skip with no side effect:
    | Change | Expected |
    | --- | --- |
    | ... | ... |
 
 ### Reviewer guide
-- **Focus areas**: ...
-- **Risky**: ...
-- **Mechanical**: ...
-- **Pattern**: ...
+- **<Category 1>** — <the question, with `file:line`>
+- **<Category 2>** — ...
+- **<Category 3>** — ...
 
 ### Checklist
 - [ ] <items verbatim from the repo template>
@@ -169,15 +203,15 @@ Apply it to prose only. Leave commands, paths, `file:line` references, table val
 
 ## Length budget
 
-A reviewer skims this before reading the diff. If the body is long enough to need skimming itself, it has failed. The budget bites on the prose sections; How to test is exempt, because coverage is worth more than brevity there.
+A reviewer skims this before reading the diff. If the body is long enough to need skimming itself, it has failed. Every section is capped, How to test included — an uncapped test section grows into something nobody executes.
 
 | Section | Budget |
 | --- | --- |
 | Ticket | 1 line |
 | Description | **2–3 sentences, ≤ 60 words** — the tightest constraint here |
 | Changes by function | the table, plus at most 1 sentence — usually zero |
-| How to test | no step cap; one line per step, guard cases in one table |
-| Reviewer guide | ≤ 4 bullets, one line each |
+| How to test | **≤ 12 steps**, one line each, guard cases in one table |
+| Reviewer guide | **≤ 3 bullets**, from the fixed category list, one line each |
 
 Judge the whole body by line count, not words — tables make word counts lie. Under **~50 lines, checklist excluded**, is the bar. Check before handing over:
 
@@ -185,11 +219,11 @@ Judge the whole body by line count, not words — tables make word counts lie. U
 wc -l <body-file>
 ```
 
-Over budget → cut, don't reflow. The first things to go are context a reviewer already has, restated assertions, and parentheticals hedging a claim already made. Never buy length back by dropping a test case or a `file:line` on a risky change — compress the prose around them.
+Over budget → cut, don't reflow. The first things to go are context a reviewer already has, restated assertions, and parentheticals hedging a claim already made. Then drop any test step that inspects rather than exercises — it was never going to be run. Never buy length back by dropping a `file:line` on a risky change, or by cutting the guard-case table.
 
 ## Content bar (applies to every section)
 
-**Terse in prose, exhaustive in coverage.** When those two pull against each other, prose loses: cut a sentence before you cut a test case.
+**Specific over exhaustive.** Coverage is bounded by what a reviewer will actually do. One pasteable command beats a paragraph describing a scenario they'll skip; when only the automated tests pin a case, give the test command rather than narrating the case.
 
 **Readable with zero system context.** A reviewer from another team should follow it without opening a second file. Expand an internal acronym on first use, name the module or surface a term belongs to, and say what a domain object *is* when it isn't self-evident. One clause of context beats a link.
 
